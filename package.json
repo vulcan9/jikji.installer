@@ -1,7 +1,7 @@
 {
   "name": "nwjs-builder-phoenix",
   "version": "1.15.0",
-  "description": "",
+  "description": "Jik-ji 패키징용으로 nwjs-builder-phoenix 수정",
   "main": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",
   "bin": {
