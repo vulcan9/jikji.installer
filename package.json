@@ -1,6 +1,6 @@
 {
-    "name": "nwjs-builder-phoenix",
-    "version": "1.15.1",
+    "name": "jikji-editor-installer",
+    "version": "1.15.2",
     "description": "",
     "main": "./dist/lib/index.js",
     "types": "./dist/lib/index.d.ts",
@@ -9,11 +9,14 @@
         "run": "dist/bin/run.js"
     },
     "scripts": {
-        "prepublish": "npm run build",
-        "test": "npm run build && ava",
-        "coverage": "nyc ava",
         "build": "tsc --declaration",
-        "release": "npm test && standard-version"
+        "prepublish": "npm run build",
+        "//test": "npm run build && ava",
+        "//coverage": "nyc ava",
+        "//release": "npm test && standard-version",
+        "NPM 배포": "--------------------------------------------------------------",
+        "//package": "cd dist && npm pack --project=jikji.installer --dest=dist --up",
+        "package": "gulp release --project=skinnable --scope=jj-viewer"
     },
     "repository": {
         "type": "git",
