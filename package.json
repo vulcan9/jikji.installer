@@ -1,7 +1,7 @@
 {
-    "name": "jj-editor-installer",
-    "version": "1.15.2",
-    "description": "A possible solution to build and package a ready for distribution NW.js app for Windows, macOS and Linux.",
+    "name": "@jj-editor/installer",
+    "version": "1.15.3",
+    "description": "jik-ji editor installer",
     "main": "./dist/lib/index.js",
     "types": "./dist/lib/index.d.ts",
     "bin": {
