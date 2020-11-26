@@ -1,11 +1,13 @@
 .*
 *.log
-node_modules
-/packages
+/_temp
 /assets/project
 /caches
 /coverage
+/dist_sample
 /docs
+node_modules
+/packages
 /src
 /test
-/_temp
+/sample.js

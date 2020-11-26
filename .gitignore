@@ -6,3 +6,4 @@ node_modules
 /assets/project/dist
 /caches
 /dist
+/dist_sample

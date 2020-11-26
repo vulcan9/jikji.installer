@@ -14,8 +14,10 @@
         "//test": "npm run build && ava",
         "//coverage": "nyc ava",
         "//release": "npm test && standard-version",
-        "NPM 배포": "--------------------------------------------------------------",
-        "//package": "npm pack && npm publish"
+
+        "샘플 패키징 실행": "--------------------------------------------------------------",
+        "sample": "npm run build && node sample.js --dir=./assets/project",
+        "sampleRun": "npm run build && node sample.js --dir=./assets/project --run"
     },
     "repository": {
         "type": "git",
