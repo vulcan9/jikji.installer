@@ -1,7 +1,7 @@
 {
-    "name": "jikji-editor-installer",
+    "name": "jj-editor-installer",
     "version": "1.15.2",
-    "description": "",
+    "description": "A possible solution to build and package a ready for distribution NW.js app for Windows, macOS and Linux.",
     "main": "./dist/lib/index.js",
     "types": "./dist/lib/index.d.ts",
     "bin": {
@@ -15,19 +15,18 @@
         "//coverage": "nyc ava",
         "//release": "npm test && standard-version",
         "NPM 배포": "--------------------------------------------------------------",
-        "//package": "cd dist && npm pack --project=jikji.installer --dest=dist --up",
-        "package": "gulp release --project=skinnable --scope=jj-viewer"
+        "//package": "npm pack && npm publish"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/evshiron/nwjs-builder-phoenix.git"
+        "url": "git+https://github.com/vulcan9/jikji.installer.git"
     },
-    "author": "evshiron",
+    "author": "Dong-il Park <pdi1066@naver.com> (https://github.com/vulcan9)",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/evshiron/nwjs-builder-phoenix/issues"
+        "url": "https://github.com/vulcan9/jikji.installer/issues"
     },
-    "homepage": "https://github.com/evshiron/nwjs-builder-phoenix#readme",
+    "homepage": "https://github.com/vulcan9/jikji.installer#readme",
     "devDependencies": {
         "@types/bluebird": "^3.5.3",
         "@types/debug": "0.0.29",
@@ -42,9 +41,9 @@
         "ava": "^0.18.2",
         "cross-env": "^3.2.3",
         "lerna": "^2.0.0-rc.3",
-        "nyc": "^10.1.2",
-        "standard-version": "^4.0.0",
-        "tslint": "^4.5.1",
+        "nyc": "^15.1.0",
+        "standard-version": "^9.0.0",
+        "tslint": "^6.1.3",
         "typescript": "^2.2.1"
     },
     "dependencies": {
@@ -62,9 +61,13 @@
         "semver": "^5.3.0",
         "source-map-support": "^0.4.11",
         "tmp": "0.0.31",
-        "yargs": "^7.0.1"
+        "yargs": "^16.1.1"
     },
     "engines": {
         "node": ">=5.10.0"
+    },
+    "directories": {
+        "doc": "docs",
+        "test": "test"
     }
 }
