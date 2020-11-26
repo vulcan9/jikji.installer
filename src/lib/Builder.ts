@@ -261,7 +261,7 @@ export class Builder {
     protected renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
         const src = resolve(targetDir, 'nw.exe');
-        const dest = resolve(targetDir, `${ config.win.productName }.exe`);
+        const dest = resolve(targetDir, `${ config.win.exeName }.exe`);
 
         return rename(src, dest);
 
@@ -577,7 +577,7 @@ export class Builder {
 
     protected async buildNsisDiffUpdater(platform: string, arch: string, versionInfo: NsisVersionInfo, fromVersion: string, toVersion: string, pkg: any, config: BuildConfig) {
 
-        const diffNsis = resolve(this.dir, config.output, `${ pkg.name }-${ toVersion }-from-${ fromVersion }-${ platform }-${ arch }-Update.exe`);
+        const diffNsis = resolve(this.dir, config.output, `${ pkg.name }-${ toVersion } (${ platform } ${ arch })-(update from ${ fromVersion }).exe`);
 
         const fromDir = resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
         const toDir = resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
@@ -585,14 +585,20 @@ export class Builder {
         const data = await (new NsisDiffer(fromDir, toDir, {
 
             // Basic.
-            appName: config.win.productName,
+            productName: config.win.productName,
             companyName: config.win.companyName,
             description: config.win.fileDescription,
             version: fixWindowsVersion(config.win.productVersion),
             copyright: config.win.copyright,
 
+            publisher: config.win.publisher,
+            exeName: config.win.exeName,
+            programGroupName: config.win.programGroupName,
+
             icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
             unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            web: config.nsis.web,
 
             // Compression.
             compression: 'lzma',
@@ -712,19 +718,25 @@ export class Builder {
 
         const versionInfo = new NsisVersionInfo(resolve(this.dir, config.output, 'versions.nsis.json'));
 
-        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }-Setup.exe`);
+        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }.exe`);
 
         const data = await (new NsisComposer({
 
             // Basic.
-            appName: config.win.productName,
+            productName: config.win.productName,
             companyName: config.win.companyName,
             description: config.win.fileDescription,
             version: fixWindowsVersion(config.win.productVersion),
             copyright: config.win.copyright,
 
+            publisher: config.win.publisher,
+            exeName: config.win.exeName,
+            programGroupName: config.win.programGroupName,
+
             icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
             unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            web: config.nsis.web,
 
             // Compression.
             compression: 'lzma',
@@ -777,19 +789,25 @@ export class Builder {
 
         const versionInfo = new NsisVersionInfo(resolve(this.dir, config.output, 'versions.nsis.json'));
 
-        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }-Setup.exe`);
+        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }.exe`);
 
         const data = await (new Nsis7Zipper(sourceArchive, {
 
             // Basic.
-            appName: config.win.productName,
+            productName: config.win.productName,
             companyName: config.win.companyName,
             description: config.win.fileDescription,
             version: fixWindowsVersion(config.win.productVersion),
             copyright: config.win.copyright,
 
+            publisher: config.win.publisher,
+            exeName: config.win.exeName,
+            programGroupName: config.win.programGroupName,
+
             icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
             unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            web: config.nsis.web,
 
             // Compression.
             compression: 'lzma',

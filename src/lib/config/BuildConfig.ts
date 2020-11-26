@@ -56,23 +56,20 @@ export class BuildConfig {
 
         this.output = normalize(this.output);
 
-        this.appId = this.appId ? this.appId : `io.github.nwjs.${ pkg.name }`;
+        this.appId = this.appId ? this.appId : (pkg.domain || pkg.name);
 
         if(this.win.versionStrings.ProductName && !this.win.productName) {
             console.warn('DEPRECATED: build.win.versionStrings.ProductName is deprecated, use build.win.productName instead.');
             this.win.productName = this.win.versionStrings.ProductName;
         }
-
         if(this.win.versionStrings.CompanyName && !this.win.companyName) {
             console.warn('DEPRECATED: build.win.versionStrings.CompanyName is deprecated, use build.win.companyName instead.');
             this.win.companyName = this.win.versionStrings.CompanyName;
         }
-
         if(this.win.versionStrings.FileDescription && !this.win.fileDescription) {
             console.warn('DEPRECATED: build.win.versionStrings.FileDescription is deprecated, use build.win.fileDescription instead.');
             this.win.fileDescription = this.win.versionStrings.FileDescription;
         }
-
         if(this.win.versionStrings.LegalCopyright && !this.win.copyright) {
             console.warn('DEPRECATED: build.win.versionStrings.LegalCopyright is deprecated, use build.win.copyright instead.');
             this.win.copyright = this.win.versionStrings.LegalCopyright;
@@ -82,7 +79,7 @@ export class BuildConfig {
         this.win.companyName = this.win.companyName ? this.win.companyName : this.win.productName;
         this.win.fileDescription = this.win.fileDescription ? this.win.fileDescription : pkg.description;
         this.win.productVersion = this.win.productVersion ? this.win.productVersion : pkg.version;
-        this.win.fileVersion = this.win.fileVersion ? this.win.fileVersion : this.win.productVersion;
+        this.win.fileVersion = (this.win.fileVersion || this.nwVersion ) || this.win.productVersion;
 
         this.mac.name = this.mac.name ? this.mac.name : pkg.name;
         this.mac.displayName = this.mac.displayName ? this.mac.displayName : this.mac.name;

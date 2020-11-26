@@ -15,6 +15,10 @@ export class WinConfig {
     } = {};
     public icon: string = undefined;
 
+    public publisher: string = undefined;
+    public exeName: string = undefined;
+    public programGroupName: string = undefined;
+
     constructor(options: any = {}) {
 
         Object.keys(this).map((key) => {

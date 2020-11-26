@@ -3,10 +3,11 @@ export class NsisConfig {
 
     public icon: string = undefined;
     public unIcon: string = undefined;
+    public license: string = undefined;
+    public web: string = undefined;
 
     public languages: string[] = [ 'English' ];
-
-    public installDirectory: string = '$LOCALAPPDATA\\${_APPNAME}';
+    public installDirectory: string = '$LOCALAPPDATA\\\${PRODUCT_NAME}';
 
     public diffUpdaters: boolean = false;
     public hashCalculation: boolean = true;
