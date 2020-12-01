@@ -15,6 +15,7 @@
             "single",
             "avoid-escape"
         ],
+        "no-trailing-whitespace": true,
         "whitespace": [
             true,
             "check-operator",

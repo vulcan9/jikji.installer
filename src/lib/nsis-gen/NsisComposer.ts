@@ -1,3 +1,4 @@
+/* tslint:disable:no-trailing-whitespace */
 
 import { resolve, win32 } from 'path';
 
@@ -226,8 +227,11 @@ InstallDirRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
 !define I_KA								"이"				; 이/가 문제 해결을 위한 define. $PRODUCT 에 따라 바뀐다.
 
 # 언어 설정
+LangString TXT_UNINSTALL					\${LANG_KOREAN}		"이전 버전을 제거하는 중입니다. 잠시 기다려 주세요."
+LangString TXT_SECTION_UNINSTALL			\${LANG_KOREAN}		"이전 버전 삭제"
 LangString TXT_EXTRACTING					\${LANG_KOREAN}		"설치하는 동안 잠시 기다려 주세요."
-LangString TXT_SECTION_COPY					\${LANG_KOREAN}		"프로그램 설치 (required)"
+LangString TXT_SECTION_COPY					\${LANG_KOREAN}		"프로그램 설치"
+LangString TXT_SECTION_COPY_RESOURCE		\${LANG_KOREAN}		"구성 요소 설치"
 LangString TXT_SECTION_CREATEDESKTOPICON	\${LANG_KOREAN}		"바탕 화면에 단축 아이콘 생성"
 LangString TXT_SECTION_CREATEQUICKLAUNCH	\${LANG_KOREAN}		"빠른 실행 단축 아이콘 생성"
 LangString TXT_SECTION_CREATSTARTMENU		\${LANG_KOREAN}		"시작 메뉴 단축 아이콘 생성"
@@ -237,11 +241,51 @@ LangString TXT_PROGRAM_GROUP_NAME			\${LANG_KOREAN}		"\${PROGRAM_GROUP_NAME}"
 
 LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		"\${PRODUCT_NAME} 프로그램이 실행중 입니다.$\\r$\\n$\\r$\\n프로그램을 강제 종료하시겠습니까?"
 
+# Section 이름 : [/o] [([!]|[-])section_name] [section index output]
+; (!) 설치 구성요소 박스에서 BOLD 표시됨
+; (-) 감추기
+; (/o) 체크 해지 상태
+
+;##########################################################
+; 인스톨
+;##########################################################
+
 ;----------------------------------------------------------
-# 기본 파일 복사
+# 이전 버전 삭제
 ;----------------------------------------------------------
 
-# Section 이름 ! 로 시작되면 설치 구성요소 박스에서 BOLD 표시됨
+Section -$(TXT_SECTION_UNINSTALL)
+	; 설치 섹션 "RO" 는 Read Only (해제 불가)
+	SectionIn RO
+
+	Push $6
+	ReadRegStr "$6" \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "UninstallString" ; 기존버전 설치유뮤 확인
+	
+	StrCmp "$6" "" done
+
+	ClearErrors
+	DetailPrint $(TXT_UNINSTALL)
+	
+	; 실행 종료시까지 기다림 (/S: silent)
+	ExecWait "$6 /S _?=$INSTDIR" ;Do not copy the uninstaller to a temp file
+
+	/*
+	IfErrors no_remove_uninstaller done
+		;You can either use Delete /REBOOTOK in the uninstaller or add some code
+		;here to remove the uninstaller. Use a registry key to check
+		;whether the user has chosen to uninstall. If you are using an uninstaller
+		;components page, make sure all sections are uninstalled.
+	no_remove_uninstaller:
+		MessageBox MB_OK "no_remove_uninstaller"
+	*/
+  
+	done:
+
+SectionEnd
+
+;----------------------------------------------------------
+# 설치 : 기본 파일 복사
+;----------------------------------------------------------
 
 Section !$(TXT_SECTION_COPY)
 	; 설치 섹션 "RO" 는 Read Only (해제 불가)
@@ -250,16 +294,9 @@ Section !$(TXT_SECTION_COPY)
 	DetailPrint $(TXT_EXTRACTING)
 	SetDetailsPrint listonly
 
-	;-------------
-	; 여기에 설치를 원하는 파일을 나열한다.
-	SetOutPath "$INSTDIR"
-	File /r .\\*.*
-	;File /r .\\index.html
-	
-	; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
-	;SetOutPath $INSTDIR\\assets
-	;File .\\assets\\*.*
-	
+	; 설치 파일 복사
+	Call Install
+
 	;-------------
 	; 실행파일 등록
 	; registry - installation path
@@ -278,8 +315,60 @@ Section !$(TXT_SECTION_COPY)
 
 	; create Uninstaller
 	WriteUninstaller "$INSTDIR\\\${UNINSTALL_NAME}"
-	
+
 SectionEnd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;----------------------------------------------------------
+# 설치 : 리소스 파일 복사
+;----------------------------------------------------------
+
+/*
+압축 해지 및 복사
+
+;TXT_SECTION_COPY_RESOURCE
+Function InstallResource
+	
+	; 여기에 설치를 원하는 파일을 나열한다.
+	SetOutPath "$INSTDIR"
+	File /r .\\*.*
+
+	; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
+	;SetOutPath $INSTDIR\\assets
+	;File .\\assets\\*.*
+FunctionEnd
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;##########################################################
+; 설치 (기타)
+;##########################################################
 
 ;----------------------------------------------------------
 ; 프로그램 그룹 생성
@@ -293,7 +382,7 @@ Section $(TXT_SECTION_CREATSTARTMENU)
 
 	; 시작 메뉴 단축 아이콘 - $SMPROGRAMS
 	; 위치 : C:/ProgramData/Microsoft/Windows/Start Menu/Programs/
-	
+
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_PROGG}
 	SetOutPath			"$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\"
 	SetOutPath			$INSTDIR
@@ -330,6 +419,10 @@ Section $(TXT_SECTION_CREATEQUICKLAUNCH)
 	CreateShortCut		"$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk" "$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
 SectionEnd
 
+;##########################################################
+; 언인스톨
+;##########################################################
+
 ;----------------------------------------------------------
 ; 언인스톨
 ;----------------------------------------------------------
@@ -340,18 +433,10 @@ Section Uninstall
 	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
 
 
-	;-------------
-	; 설치된 폴더 지우기.
-	RMDir /r "$INSTDIR"
-	
-	; 파일이 아직 남아 있으면..
-	IfFileExists $INSTDIR\\*.* 0 skipDelete
-		MessageBox MB_ICONINFORMATION|MB_YESNO $(TXT_DELETE_ALL_FILES) IDNO skipDelete
-		RMDir /r "$INSTDIR"
-		RMDir /REBOOTOK "$INSTDIR"
-	skipDelete:
+	; 설치 파일 제거
+	Call un.Install
 
-	
+
 	;-------------
 	; 프로그램 그룹 지우기
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_PROGG}								; 설치할때 프로그램 그룹이 설치된 위치.
@@ -359,7 +444,7 @@ Section Uninstall
 
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_ICON}
 	RMDir /r			"$STARTMENU\\Programs\\$(TXT_PROGRAM_GROUP_NAME)\\"		; 시작 메뉴 아이콘 그룹 지우기
-	
+
 	;-------------
 	; 단축 아이콘 지우기
 	SetShellVarContext current									; current 시작 단축 아이콘 지우기
@@ -372,12 +457,12 @@ Section Uninstall
 		Delete	"$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk"					; 빠른 실행
 		;Delete	"$STARTMENU\\Programs\\\${EXE_FILE_NAME}.lnk"			; 시작 메뉴
 		;Delete	"$SMSTARTUP\\\${EXE_FILE_NAME}.lnk"
-	
+
 	;-------------
 	; 등록 정보 지우기
 	DeleteRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}"
 	DeleteRegKey \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}"
-	
+
 SectionEnd
 
 ;####################################################################################################################
@@ -393,7 +478,7 @@ FunctionEnd
 Function .onInstFailed
 	; 기존에 실행중인 프로그램 종료.
 	Call CheckAndCloseApp
-	
+
 	Delete "$INSTDIR\\*.*"
 	RMDir /r "$INSTDIR"
 
@@ -418,19 +503,19 @@ Function CheckAndCloseApp
 	loop:
 		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
 		StrCmp $R0 1 processFound done
-		
+
 	processFound:
 		StrCmp $R8 "first" kill
-		
+
 		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
 		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
 		StrCpy $R8 "first"
 		goto kill
-		
+
 	kill:
 		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
 		goto loop
-		
+
 	done:
 FunctionEnd
 
@@ -439,20 +524,53 @@ Function un.CheckAndCloseApp
 	loop:
 		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
 		StrCmp $R0 1 processFound done
-		
+
 	processFound:
 		StrCmp $R8 "first" kill
-		
+
 		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
 		MessageBox MB_ICONINFORMATION|MB_YESNO "삭제할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
 		StrCpy $R8 "first"
 		goto kill
-		
+
 	kill:
 		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
 		goto loop
-		
+
 	done:
+FunctionEnd
+
+;----------------------------------------------------------
+; 파일 설치, 제거
+;----------------------------------------------------------
+
+Function Install
+	
+	; 여기에 설치를 원하는 파일을 나열한다.
+	SetOutPath "$INSTDIR"
+	File /r .\\*.*
+
+	; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
+	;SetOutPath $INSTDIR\\assets
+	;File .\\assets\\*.*
+	
+FunctionEnd
+
+Function un.Install
+	
+	; 설치된 폴더 지우기.
+	RMDir /r "$INSTDIR"
+
+	; 파일이 아직 남아 있으면..
+	IfFileExists $INSTDIR\\*.* 0 skipDelete
+		
+		; 삭제 확인 메세지
+		;MessageBox MB_ICONINFORMATION|MB_YESNO $(TXT_DELETE_ALL_FILES) IDNO skipDelete
+		
+		RMDir /r "$INSTDIR"
+		RMDir /REBOOTOK "$INSTDIR"
+	skipDelete:
+
 FunctionEnd
 
         `;

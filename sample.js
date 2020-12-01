@@ -76,7 +76,8 @@ function execute(command, options, cb) {
     if (options.shell === undefined) options.shell = true;
 
     // 실시간 로그 표시
-    var temp = exec(command, options, function(){
+    var temp = exec(command, options, function(err){
+        if(err) console.error(err)
         if(cb) cb();
     });
     temp.stdout.pipe(process.stdout);
