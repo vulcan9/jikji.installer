@@ -66,6 +66,8 @@ export class NsisComposer {
 	// 샘플2 : https://www.newnnow.co.kr/36
 	// http://csk6124-textcube.blogspot.com/2011/02/nsis.html
 	// https://jabis.tistory.com/3
+	// 설치후 사용자 권한으로 작업 실행
+	// http://egloos.zum.com/pelican7/v/3086158
 
 	public async make(): Promise<string> {
 
@@ -336,7 +338,45 @@ SectionEnd
 ;----------------------------------------------------------
 
 /*
+# 기본 압축 해제 명령에 % 표시 기능을 추가 한 명령.
+Nsis7z::ExtractWithDetails "DATA.7z" "Installing package %s..." 와 같이 
+2번째 파라미터에 스트링을 넘겨 주면 그에 알맞게 % 표시를 해준다. 
+위의 명령을 예로 들면 
+Installing package %s... 을 
+Installing package 퍼센트% ( 현재 용량 / 전체 용량 ) 으로 표시해준다.
+*/
+
+
+; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
+; (...nsis/Plugins[/platform])
+; https://nsis.sourceforge.io/Nsisunz_plug-in
+
+
+Section "Extract"
+
+	/*
+	SetOutPath "PATH"
+	SetOverwrite ifnewer
+	File "7za.exe"
+	File "File.7z"
+	nsis7z::extract "File.7z"
+	delete "7za.exe"
+	delete "libraries.7z"
+	*/
+
+	CreateDirectory "$PluginsDir\\TestDir"
+	nsisunz::Unzip "$PluginsDir\\test.zip" "$PluginsDir\\TestDir"
+
+SectionEnd
+
+
+/*
+
 압축 해지 및 복사
+nwJS 설치
+firstrun, (nw) 압축 해지
+
+
 
 ;TXT_SECTION_COPY_RESOURCE
 Function InstallResource
@@ -351,6 +391,14 @@ Function InstallResource
 FunctionEnd
 */
 
+
+
+/*
+(un)설치할때
+jikji.editor.demo.launcher 제거
+jikji.editor.demo 제거
+firstrun, (nw) 제거
+*/
 
 
 
