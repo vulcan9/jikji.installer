@@ -18,6 +18,13 @@ export class BuildConfig {
     public files: string[] = [ '**/*' ];
     public excludes: string[] = [];
 
+    // 압축 파일 풀기 기능 지원
+    public extract: {src?: string, dest?: string} = {};
+    // nwJS App 복사 기능 지원
+    public copyApp: {excludes?: string[], dest?: string} = {};
+    // public nwFiles: string[] = [];
+    public appName: string = '';
+
     public win: WinConfig = new WinConfig();
     public mac: MacConfig = new MacConfig();
     public linux: LinuxConfig = new LinuxConfig();
@@ -86,6 +93,16 @@ export class BuildConfig {
         this.mac.version = this.mac.version ? this.mac.version : pkg.version;
         this.mac.description = this.mac.description ? this.mac.description : pkg.description;
 
+        if(pkg.extract) {
+            if(pkg.extract.src) this.extract.src = normalize(pkg.extract.src);
+            if(pkg.extract.dest) this.extract.dest = normalize(pkg.extract.dest);
+        }
+
+        if(pkg.copyApp) {
+            if(pkg.copyApp.excludes) this.copyApp.excludes = pkg.copyApp.excludes;
+            if(pkg.copyApp.dest) this.copyApp.dest = normalize(pkg.copyApp.dest);
+        }
+        this.appName = pkg.name;
     }
 
 }

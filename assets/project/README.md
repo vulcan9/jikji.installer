@@ -89,7 +89,7 @@ __
 
             // 실행 파일 이름, 아이콘
             "exeName": "testApp3",
-            "icon": "./assets/pd.ico",
+            "icon": "./assets/exeIcon.ico",
 
             // 시작 메뉴의 프로그램 그룹 이름
             "programGroupName": "토브소프트"

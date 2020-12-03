@@ -32,6 +32,12 @@ export interface INsisComposerOptions {
 	// Output.
 	output: string;
 
+	// 압축 파일 풀기 기능 지원
+	extract: {src?: string, dest?: string};
+	// App 복사 기능 지원
+	copyApp: {excludes?: string[], dest?: string};
+	appName: string;
+	// nwFiles: string[];
 }
 
 export class NsisComposer {
@@ -71,6 +77,12 @@ export class NsisComposer {
 
 	public async make(): Promise<string> {
 
+		// /x "assets" /x "package.json"
+		let copyAppExcludes = '';
+		if(this.options.copyApp.excludes) {
+			copyAppExcludes = this.options.copyApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
+		}
+
 		return `
 ;##########################################################
 ; define Settings
@@ -78,6 +90,16 @@ export class NsisComposer {
 
 # setup 파일 경로
 !define OUTFILE_NAME				"${ win32.normalize(resolve(this.options.output)) }"
+
+# 압축 파일 extract 정보 
+!define EXTRACT_SRC 				"${ win32.normalize(this.options.extract.src || '')}"
+!define EXTRACT_DEST 				"${ win32.normalize(this.options.extract.dest || '')}"
+
+# 서브 App 리소스 (nwJS App) - 런처가 실행할 app
+!define COPYAPP_DEST 				"${ win32.normalize(this.options.copyApp.dest || '')}"
+
+; nw 실행시 생성되는 chrome app 폴더 경로
+!define CHROME_APP_PATH 			"$LOCALAPPDATA\\${ this.options.appName }"
 
 ;----------------------------------------------------------
 ; 배포 프로그램 이름, 버전 및 기타 변수
@@ -337,82 +359,37 @@ SectionEnd
 # 설치 : 리소스 파일 복사
 ;----------------------------------------------------------
 
-/*
-# 기본 압축 해제 명령에 % 표시 기능을 추가 한 명령.
-Nsis7z::ExtractWithDetails "DATA.7z" "Installing package %s..." 와 같이 
-2번째 파라미터에 스트링을 넘겨 주면 그에 알맞게 % 표시를 해준다. 
-위의 명령을 예로 들면 
-Installing package %s... 을 
-Installing package 퍼센트% ( 현재 용량 / 전체 용량 ) 으로 표시해준다.
-*/
-
-
 ; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
 ; (...nsis/Plugins[/platform])
 ; https://nsis.sourceforge.io/Nsisunz_plug-in
 
+; 버전별 리소스 폴더로 압축 해지하기
+Section $(TXT_SECTION_COPY_RESOURCE)
+	; 설치 섹션 "RO" 는 Read Only (해제 불가)
+	SectionIn RO
 
-Section "Extract"
+	StrCmp "\${EXTRACT_SRC}" "" ok
 
-	/*
-	SetOutPath "PATH"
-	SetOverwrite ifnewer
-	File "7za.exe"
-	File "File.7z"
-	nsis7z::extract "File.7z"
-	delete "7za.exe"
-	delete "libraries.7z"
-	*/
+	; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
+	; $APPDATA (current:AppData/Roaming, all:ProgramData)
+	; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
 
-	CreateDirectory "$PluginsDir\\TestDir"
-	nsisunz::Unzip "$PluginsDir\\test.zip" "$PluginsDir\\TestDir"
-
-SectionEnd
-
-
-/*
-
-압축 해지 및 복사
-nwJS 설치
-firstrun, (nw) 압축 해지
-
-
-
-;TXT_SECTION_COPY_RESOURCE
-Function InstallResource
+	SetShellVarContext current
+	;MessageBox MB_OK "\${EXTRACT_DEST}"
 	
-	; 여기에 설치를 원하는 파일을 나열한다.
-	SetOutPath "$INSTDIR"
-	File /r .\\*.*
+	;하위 폴더까지 재귀 생성됨
+	CreateDirectory "\${EXTRACT_DEST}"
+	
+	; nsisunz::UnzipToLog "zip 파일 경로" "압축 해지 폴더 경로"
+	nsisunz::UnzipToLog "$INSTDIR\\\${EXTRACT_SRC}" "\${EXTRACT_DEST}"
+	
+	Pop $0
+	StrCmp $0 "success" ok
+	  DetailPrint "$0" ; error message 출력
+	ok:
 
-	; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
-	;SetOutPath $INSTDIR\\assets
-	;File .\\assets\\*.*
-FunctionEnd
-*/
-
-
-
-/*
-(un)설치할때
-jikji.editor.demo.launcher 제거
-jikji.editor.demo 제거
-firstrun, (nw) 제거
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	Call InstallResource
+SectionEnd
 
 ;##########################################################
 ; 설치 (기타)
@@ -480,10 +457,9 @@ Section Uninstall
 	; uninstall 파일 지우기.
 	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
 
-
 	; 설치 파일 제거
 	Call un.Install
-
+	Call un.InstallResource
 
 	;-------------
 	; 프로그램 그룹 지우기
@@ -621,7 +597,32 @@ Function un.Install
 
 FunctionEnd
 
+
+; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
+; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
+; nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
+; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
+Function InstallResource
+	; 폴더 경로
+	StrCpy $9 "\${COPYAPP_DEST}"
+	RMDir /r $9
+		
+	; nwJS 설치 (installer 파일 그대로 사용)
+	SetOutPath $9
+	;MessageBox MB_OK "CopyFiles: $9"
+	
+	;File /r /x "assets" /x "package.json" .\\*.*
+	File /r ${copyAppExcludes} .\\*.*
+FunctionEnd
+
+Function un.InstallResource
+	; copyApp 폴더 삭제
+	RMDir /r \${COPYAPP_DEST}
+	
+	; nw 실행시 생성되는 chrome app 폴더 삭제
+	RMDir /r \${CHROME_APP_PATH}
+FunctionEnd
+
         `;
 	}
-
 }

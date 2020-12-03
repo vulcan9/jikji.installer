@@ -609,6 +609,10 @@ export class Builder {
 
             // Output.
             output: diffNsis,
+            extract: config.extract,
+            // nwFiles: config.nwFiles,
+            appName: config.appName,
+            copyApp: config.copyApp
 
         })).make();
 
@@ -747,6 +751,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
+            extract: config.extract,
+            // nwFiles: config.nwFiles,
+            appName: config.appName,
+            copyApp: config.copyApp
 
         })).make();
 
@@ -818,7 +826,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
-
+            extract: config.extract,
+            // nwFiles: config.nwFiles,
+            appName: config.appName,
+            copyApp: config.copyApp
         })).make();
 
         const script = await tmpName();
@@ -893,6 +904,29 @@ export class Builder {
         if(!this.options.mute) {
             console.info(`Building directory target ends within ${ this.getTimeDiff(started) }s.`);
         }
+
+        /*******************************************
+        // Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우
+        // 권한 문제가 발생한다.
+
+        // 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
+        // nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
+        // 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
+
+        // Original nwJS App 파일 목록
+        console.info(`\n* Dir: ${ targetDir }`);
+
+        if(config.copyApp.dest) {
+            config.nwFiles = await globby(['*'], {
+                cwd: targetDir,
+                follow: true,
+                mark: true,
+                ignore: config.copyApp.excludes,
+            });
+            console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.copyApp.dest }\n`);
+        }
+
+        //*******************************************/
 
         // TODO: Consider using `Bluebird.map` to enable concurrent target building.
         for(const target of config.targets) {

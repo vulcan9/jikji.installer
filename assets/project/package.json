@@ -11,7 +11,7 @@
     "author": "evshiron",
     "license": "MIT",
     "window": {
-        "icon": "./assets/pd.png"
+        "icon": "./assets/winIcon.png"
     },
     "nwjs-builder-phoenix-설정": "(diffUpdaters:true) versions.nsis.json 파일을 유지하면 update.exe 파일이 생성됨",
     "build": {
@@ -25,10 +25,27 @@
             "nsis7z"
         ],
         "files": [
-            "index.html",
-            "assets/**/*"
+            "**/*"
         ],
         "excludes": [],
+
+        "extract": {
+            "src": "test.bin",
+            "//dest": "$LOCALAPPDATA/test/0.30.0",
+            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/firstrun/0.30.0"
+        },
+        "copyApp": {
+            "excludes": [
+                "assets",
+                "assets/**/*",
+                "package.json",
+                "test.bin",
+                "README.md",
+                "index.html"
+            ],
+            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/app"
+        },
+
         "strippedProperties": [
             "scripts",
             "devDependencies",
@@ -42,7 +59,7 @@
             "publisher": "(주) 토브소프트",
             "fileDescription": "epub 저작 도구",
             "copyright": "tovsoft (c) 2020",
-            "icon": "./assets/pd.ico",
+            "icon": "./assets/exeIcon.ico",
             "exeName": "testApp3",
             "programGroupName": "토브소프트"
         },
