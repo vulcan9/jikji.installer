@@ -19,9 +19,9 @@ export class BuildConfig {
     public excludes: string[] = [];
 
     // 압축 파일 풀기 기능 지원
-    public extract: {src?: string, dest?: string} = {};
+    public resource?: any = {src: '', dest: ''};
     // nwJS App 복사 기능 지원
-    public copyApp: {excludes?: string[], dest?: string} = {};
+    public childApp: {name?: string, excludes?: string[], dest?: string} = {name: '', excludes: [], dest: ''};
     // public nwFiles: string[] = [];
     public appName: string = '';
 
@@ -93,14 +93,15 @@ export class BuildConfig {
         this.mac.version = this.mac.version ? this.mac.version : pkg.version;
         this.mac.description = this.mac.description ? this.mac.description : pkg.description;
 
-        if(pkg.extract) {
-            if(pkg.extract.src) this.extract.src = normalize(pkg.extract.src);
-            if(pkg.extract.dest) this.extract.dest = normalize(pkg.extract.dest);
+        if(pkg.resource) {
+            this.resource.src = pkg.resource.src ? normalize(pkg.resource.src) : '';
+            this.resource.dest = pkg.resource.dest ? normalize(pkg.resource.dest) : '';
         }
 
-        if(pkg.copyApp) {
-            if(pkg.copyApp.excludes) this.copyApp.excludes = pkg.copyApp.excludes;
-            if(pkg.copyApp.dest) this.copyApp.dest = normalize(pkg.copyApp.dest);
+        if(pkg.childApp) {
+            this.childApp.name = pkg.childApp.name || '';
+            this.childApp.excludes = pkg.childApp.excludes || [];
+            this.childApp.dest = pkg.childApp.dest ? normalize(pkg.childApp.dest) : '';
         }
         this.appName = pkg.name;
     }

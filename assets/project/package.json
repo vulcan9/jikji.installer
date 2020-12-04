@@ -29,15 +29,18 @@
         ],
         "excludes": [],
 
-        "extract": {
-            "src": "test.bin",
-            "//dest": "$LOCALAPPDATA/test/0.30.0",
+        "//resource": "패키징 폴더중 일부를 다른곳에 extract 할때",
+        "resource": {
+            "src": "assets",
             "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/firstrun/0.30.0"
         },
-        "copyApp": {
+
+        "//childApp": "launcher-app 구조로 설치하고자 할때",
+        "childApp1": {},
+        "childApp": {
+            "name": "jikji.editor.demo",
             "excludes": [
                 "assets",
-                "assets/**/*",
                 "package.json",
                 "test.bin",
                 "README.md",

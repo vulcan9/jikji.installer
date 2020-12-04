@@ -33,9 +33,9 @@ export interface INsisComposerOptions {
 	output: string;
 
 	// 압축 파일 풀기 기능 지원
-	extract: {src?: string, dest?: string};
+	resource?: any;
 	// App 복사 기능 지원
-	copyApp: {excludes?: string[], dest?: string};
+	childApp: {name?: string, excludes?: string[], dest?: string};
 	appName: string;
 	// nwFiles: string[];
 }
@@ -61,6 +61,9 @@ export class NsisComposer {
 		this.options.languages = this.options.languages && this.options.languages.length > 0 ? this.options.languages : [ 'English' ];
 
 		this.fixedVersion = fixWindowsVersion(this.options.version);
+
+		if(this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
+		if(this.options.childApp.name) this.options.childApp.name = '$LOCALAPPDATA\\' + this.options.childApp.name;
 	}
 
 	// https://nsis.sourceforge.io/
@@ -78,9 +81,14 @@ export class NsisComposer {
 	public async make(): Promise<string> {
 
 		// /x "assets" /x "package.json"
-		let copyAppExcludes = '';
-		if(this.options.copyApp.excludes) {
-			copyAppExcludes = this.options.copyApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
+		let childAppExcludesString = '';
+		if(this.options.childApp.excludes) {
+			childAppExcludesString = this.options.childApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
+		}
+
+		let resourceExcludesString = '';
+		if(this.options.resource.src) {
+			resourceExcludesString = ('/x "' + this.options.resource.src + '"');
 		}
 
 		return `
@@ -92,14 +100,18 @@ export class NsisComposer {
 !define OUTFILE_NAME				"${ win32.normalize(resolve(this.options.output)) }"
 
 # 압축 파일 extract 정보 
-!define EXTRACT_SRC 				"${ win32.normalize(this.options.extract.src || '')}"
-!define EXTRACT_DEST 				"${ win32.normalize(this.options.extract.dest || '')}"
+!define RESOURCE_SRC 				"${ this.options.resource.src ? win32.normalize(this.options.resource.src) : '' }"
+!define RESOURCE_DEST 				"${ this.options.resource.dest ? win32.normalize(this.options.resource.dest) : '' }"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define COPYAPP_DEST 				"${ win32.normalize(this.options.copyApp.dest || '')}"
+!define CHILD_APP_DEST 				"${ this.options.childApp.dest ? win32.normalize(this.options.childApp.dest) : ''}"
 
 ; nw 실행시 생성되는 chrome app 폴더 경로
-!define CHROME_APP_PATH 			"$LOCALAPPDATA\\${ this.options.appName }"
+; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
+; $APPDATA (current:AppData/Roaming, all:ProgramData)
+; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
+!define CHROME_APP_LAUNCHER 			"${ this.options.appName }"
+!define CHROME_APP_CHILD	 			"${ this.options.childApp.name || '' }"
 
 ;----------------------------------------------------------
 ; 배포 프로그램 이름, 버전 및 기타 변수
@@ -318,9 +330,12 @@ Section !$(TXT_SECTION_COPY)
 	DetailPrint $(TXT_EXTRACTING)
 	SetDetailsPrint listonly
 
-	; 설치 파일 복사
-	Call Install
+	; 설치 파일 복사 (런처)
+	Call Install_App_Launcher
 
+	; 런처 - app 호출 구조인 경우 sub app을 복사해둠
+	Call Install_App_Child
+	
 	;-------------
 	; 실행파일 등록
 	; registry - installation path
@@ -362,38 +377,24 @@ SectionEnd
 ; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
 ; (...nsis/Plugins[/platform])
 ; https://nsis.sourceforge.io/Nsisunz_plug-in
+; https://nsis.sourceforge.io/ZipDLL_plug-in
+; 한글 이름 파일에 대해서 압축 해지 에러 발생하므로 사용 안함
+;bat 파일로 unzip 실행 (해보지 않음)
 
 ; 버전별 리소스 폴더로 압축 해지하기
 Section $(TXT_SECTION_COPY_RESOURCE)
 	; 설치 섹션 "RO" 는 Read Only (해제 불가)
 	SectionIn RO
 
-	StrCmp "\${EXTRACT_SRC}" "" ok
-
-	; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
-	; $APPDATA (current:AppData/Roaming, all:ProgramData)
-	; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
-
-	SetShellVarContext current
-	;MessageBox MB_OK "\${EXTRACT_DEST}"
+	Call Install_Resource
 	
-	;하위 폴더까지 재귀 생성됨
-	CreateDirectory "\${EXTRACT_DEST}"
-	
-	; nsisunz::UnzipToLog "zip 파일 경로" "압축 해지 폴더 경로"
-	nsisunz::UnzipToLog "$INSTDIR\\\${EXTRACT_SRC}" "\${EXTRACT_DEST}"
-	
-	Pop $0
-	StrCmp $0 "success" ok
-	  DetailPrint "$0" ; error message 출력
-	ok:
-
-	Call InstallResource
 SectionEnd
 
 ;##########################################################
 ; 설치 (기타)
 ;##########################################################
+
+; File /nonfatal 은 특정 디렉토리가 없으면 오류없이 무시
 
 ;----------------------------------------------------------
 ; 프로그램 그룹 생성
@@ -458,8 +459,9 @@ Section Uninstall
 	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
 
 	; 설치 파일 제거
-	Call un.Install
-	Call un.InstallResource
+	Call un.Install_App_Launcher
+	Call un.Install_App_Child
+	Call un.Install_Resource
 
 	;-------------
 	; 프로그램 그룹 지우기
@@ -534,11 +536,11 @@ Function CheckAndCloseApp
 		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
 		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
 		StrCpy $R8 "first"
-		goto kill
+		Goto kill
 
 	kill:
 		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
-		goto loop
+		Goto loop
 
 	done:
 FunctionEnd
@@ -555,11 +557,11 @@ Function un.CheckAndCloseApp
 		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
 		MessageBox MB_ICONINFORMATION|MB_YESNO "삭제할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
 		StrCpy $R8 "first"
-		goto kill
+		Goto kill
 
 	kill:
 		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
-		goto loop
+		Goto loop
 
 	done:
 FunctionEnd
@@ -568,21 +570,21 @@ FunctionEnd
 ; 파일 설치, 제거
 ;----------------------------------------------------------
 
-Function Install
-	
-	; 여기에 설치를 원하는 파일을 나열한다.
-	SetOutPath "$INSTDIR"
-	File /r .\\*.*
+; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
+;SetOutPath $INSTDIR\\assets
+;File .\\assets\\*.*
 
-	; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
-	;SetOutPath $INSTDIR\\assets
-	;File .\\assets\\*.*
+; 설치 파일. resource는 별도로 설치 한다.
+Function Install_App_Launcher
+	SetOutPath "$INSTDIR"
+	;File /nonfatal /a /r .\\*.*
+	File /nonfatal /a /r ${resourceExcludesString} .\\*.*
 	
 FunctionEnd
 
-Function un.Install
+Function un.Install_App_Launcher
 	
-	; 설치된 폴더 지우기.
+	; install 폴더 지우기.
 	RMDir /r "$INSTDIR"
 
 	; 파일이 아직 남아 있으면..
@@ -595,32 +597,65 @@ Function un.Install
 		RMDir /REBOOTOK "$INSTDIR"
 	skipDelete:
 
+	; nw 실행시 생성되는 chrome app 폴더 삭제
+	StrCmp "\${CHROME_APP_LAUNCHER}" "" ok
+		;MessageBox MB_OK "삭제: \${CHROME_APP_LAUNCHER}"
+		RMDir /r \${CHROME_APP_LAUNCHER}
+	ok:
 FunctionEnd
 
+;----------------------------
+; 버전별 리소스 폴더 생성
+;----------------------------
+
+Function Install_Resource
+	RMDir /r 	"\${RESOURCE_DEST}"
+	
+	StrCmp "\${RESOURCE_SRC}" "" ok
+		SetOutPath				"\${RESOURCE_DEST}"
+		File /nonfatal /a /r 	"\${RESOURCE_SRC}\\*"
+		;File /nonfatal /a /r 	assets\\*
+	ok:
+FunctionEnd
+
+; 버전별 리소스 폴더 삭제
+Function un.Install_Resource
+	StrCmp "\${RESOURCE_DEST}" "" ok
+		Delete 		\${RESOURCE_DEST}\\*.*
+		RMDir /r 	\${RESOURCE_DEST}
+	ok:
+FunctionEnd
+
+;----------------------------
+; Child App 복사
+;----------------------------
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
 ; nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
-Function InstallResource
-	; 폴더 경로
-	StrCpy $9 "\${COPYAPP_DEST}"
-	RMDir /r $9
-		
-	; nwJS 설치 (installer 파일 그대로 사용)
-	SetOutPath $9
-	;MessageBox MB_OK "CopyFiles: $9"
-	
-	;File /r /x "assets" /x "package.json" .\\*.*
-	File /r ${copyAppExcludes} .\\*.*
+Function Install_App_Child
+
+	StrCmp "\${CHILD_APP_DEST}" "" ok
+		StrCpy $9 "\${CHILD_APP_DEST}"
+		RMDir /r $9
+			
+		; nwJS 설치 (installer 파일 그대로 사용)
+		SetOutPath $9
+		File /nonfatal /a /r ${childAppExcludesString} .\\*.*
+		;File /r /x "assets" /x "package.json" .\\*.*
+	ok:
 FunctionEnd
 
-Function un.InstallResource
-	; copyApp 폴더 삭제
-	RMDir /r \${COPYAPP_DEST}
+Function un.Install_App_Child
+	; childApp 폴더 삭제
+	RMDir /r \${CHILD_APP_DEST}
 	
 	; nw 실행시 생성되는 chrome app 폴더 삭제
-	RMDir /r \${CHROME_APP_PATH}
+	StrCmp "\${CHROME_APP_CHILD}" "" ok
+		;MessageBox MB_OK "삭제: \${CHROME_APP_CHILD}"
+		RMDir /r \${CHROME_APP_CHILD}
+	ok:
 FunctionEnd
 
         `;

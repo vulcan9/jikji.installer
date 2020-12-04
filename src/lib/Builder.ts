@@ -609,10 +609,10 @@ export class Builder {
 
             // Output.
             output: diffNsis,
-            extract: config.extract,
+            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            copyApp: config.copyApp
+            childApp: config.childApp
 
         })).make();
 
@@ -751,10 +751,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
-            extract: config.extract,
+            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            copyApp: config.copyApp
+            childApp: config.childApp
 
         })).make();
 
@@ -826,10 +826,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
-            extract: config.extract,
+            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            copyApp: config.copyApp
+            childApp: config.childApp
         })).make();
 
         const script = await tmpName();
@@ -916,14 +916,14 @@ export class Builder {
         // Original nwJS App 파일 목록
         console.info(`\n* Dir: ${ targetDir }`);
 
-        if(config.copyApp.dest) {
+        if(config.childApp.dest) {
             config.nwFiles = await globby(['*'], {
                 cwd: targetDir,
                 follow: true,
                 mark: true,
-                ignore: config.copyApp.excludes,
+                ignore: config.childApp.excludes,
             });
-            console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.copyApp.dest }\n`);
+            console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
         }
 
         //*******************************************/
