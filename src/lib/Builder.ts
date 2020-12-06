@@ -609,10 +609,10 @@ export class Builder {
 
             // Output.
             output: diffNsis,
-            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            childApp: config.childApp
+            childApp: config.childApp,
+            resource: config.resource
 
         })).make();
 
@@ -751,10 +751,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
-            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            childApp: config.childApp
+            childApp: config.childApp,
+            resource: config.resource
 
         })).make();
 
@@ -826,10 +826,10 @@ export class Builder {
 
             // Output.
             output: targetNsis,
-            resource: config.resource || {},
             // nwFiles: config.nwFiles,
             appName: config.appName,
-            childApp: config.childApp
+            childApp: config.childApp,
+            resource: config.resource
         })).make();
 
         const script = await tmpName();

@@ -19,9 +19,9 @@ export class BuildConfig {
     public excludes: string[] = [];
 
     // 압축 파일 풀기 기능 지원
-    public resource?: any = {src: '', dest: ''};
+    public resource?: any = {}; // {src: string, dest: string}
     // nwJS App 복사 기능 지원
-    public childApp: {name?: string, excludes?: string[], dest?: string} = {name: '', excludes: [], dest: ''};
+    public childApp?: any = {}; // {name: string, excludes?: string[], dest: string}
     // public nwFiles: string[] = [];
     public appName: string = '';
 
@@ -39,6 +39,7 @@ export class BuildConfig {
 
         const options = pkg.build ? pkg.build : {};
 
+        // 초기값이 지정되어 있지 않으면 순환 속성에서 누락됨
         Object.keys(this).map((key) => {
             if(options[key] !== undefined) {
                 switch(key) {
@@ -93,16 +94,19 @@ export class BuildConfig {
         this.mac.version = this.mac.version ? this.mac.version : pkg.version;
         this.mac.description = this.mac.description ? this.mac.description : pkg.description;
 
-        if(pkg.resource) {
-            this.resource.src = pkg.resource.src ? normalize(pkg.resource.src) : '';
-            this.resource.dest = pkg.resource.dest ? normalize(pkg.resource.dest) : '';
-        }
+        // console.info('this: \n' + JSON.stringify(this, null, 4) + '\n');
+        // console.info('pkg: \n' + JSON.stringify(pkg, null, 4) + '\n');
 
-        if(pkg.childApp) {
-            this.childApp.name = pkg.childApp.name || '';
-            this.childApp.excludes = pkg.childApp.excludes || [];
-            this.childApp.dest = pkg.childApp.dest ? normalize(pkg.childApp.dest) : '';
-        }
+        // if(this.resource) {
+        //     this.resource.src = this.resource.src ? normalize(this.resource.src) : '';
+        //     this.resource.dest = this.resource.dest ? normalize(this.resource.dest) : '';
+        // }
+        //
+        // if(this.childApp) {
+        //     this.childApp.name = this.childApp.name || '';
+        //     this.childApp.excludes = this.childApp.excludes || [];
+        //     this.childApp.dest = this.childApp.dest ? normalize(this.childApp.dest) : '';
+        // }
         this.appName = pkg.name;
     }
 

@@ -36,7 +36,6 @@
         },
 
         "//childApp": "launcher-app 구조로 설치하고자 할때",
-        "childApp1": {},
         "childApp": {
             "name": "jikji.editor.demo",
             "excludes": [

@@ -33,9 +33,9 @@ export interface INsisComposerOptions {
 	output: string;
 
 	// 압축 파일 풀기 기능 지원
-	resource?: any;
+	resource?: any; // {src: string, dest: string};
 	// App 복사 기능 지원
-	childApp: {name?: string, excludes?: string[], dest?: string};
+	childApp?: {name: string, excludes?: string[], dest: string};
 	appName: string;
 	// nwFiles: string[];
 }
@@ -63,7 +63,8 @@ export class NsisComposer {
 		this.fixedVersion = fixWindowsVersion(this.options.version);
 
 		if(this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
-		if(this.options.childApp.name) this.options.childApp.name = '$LOCALAPPDATA\\' + this.options.childApp.name;
+
+		// process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
 	}
 
 	// https://nsis.sourceforge.io/
@@ -80,17 +81,6 @@ export class NsisComposer {
 
 	public async make(): Promise<string> {
 
-		// /x "assets" /x "package.json"
-		let childAppExcludesString = '';
-		if(this.options.childApp.excludes) {
-			childAppExcludesString = this.options.childApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
-		}
-
-		let resourceExcludesString = '';
-		if(this.options.resource.src) {
-			resourceExcludesString = ('/x "' + this.options.resource.src + '"');
-		}
-
 		return `
 ;##########################################################
 ; define Settings
@@ -99,19 +89,11 @@ export class NsisComposer {
 # setup 파일 경로
 !define OUTFILE_NAME				"${ win32.normalize(resolve(this.options.output)) }"
 
-# 압축 파일 extract 정보 
-!define RESOURCE_SRC 				"${ this.options.resource.src ? win32.normalize(this.options.resource.src) : '' }"
-!define RESOURCE_DEST 				"${ this.options.resource.dest ? win32.normalize(this.options.resource.dest) : '' }"
-
-# 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define CHILD_APP_DEST 				"${ this.options.childApp.dest ? win32.normalize(this.options.childApp.dest) : ''}"
-
 ; nw 실행시 생성되는 chrome app 폴더 경로
 ; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
 ; $APPDATA (current:AppData/Roaming, all:ProgramData)
 ; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
 !define CHROME_APP_LAUNCHER 			"${ this.options.appName }"
-!define CHROME_APP_CHILD	 			"${ this.options.childApp.name || '' }"
 
 ;----------------------------------------------------------
 ; 배포 프로그램 이름, 버전 및 기타 변수
@@ -357,19 +339,6 @@ Section !$(TXT_SECTION_COPY)
 
 SectionEnd
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ;----------------------------------------------------------
 # 설치 : 리소스 파일 복사
 ;----------------------------------------------------------
@@ -379,7 +348,7 @@ SectionEnd
 ; https://nsis.sourceforge.io/Nsisunz_plug-in
 ; https://nsis.sourceforge.io/ZipDLL_plug-in
 ; 한글 이름 파일에 대해서 압축 해지 에러 발생하므로 사용 안함
-;bat 파일로 unzip 실행 (해보지 않음)
+; bat 파일로 unzip 실행 (해보지 않음)
 
 ; 버전별 리소스 폴더로 압축 해지하기
 Section $(TXT_SECTION_COPY_RESOURCE)
@@ -517,14 +486,31 @@ Function un.onInit
 FunctionEnd
 
 ;----------------------------------------------------------
-; 기존에 실행중인 프로그램 종료.
+; 파일 설치, 제거
 ;----------------------------------------------------------
 
+${ await this.installAppLauncher() }
+${ await this.installChildApp() }
+${ await this.installResource() }
+
+;----------------------------------------------------------
+; 기존에 실행중인 프로그램 종료.
+;----------------------------------------------------------
 ; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
 ; (...nsis/Plugins[/platform])
 ; https://nsis.sourceforge.io/FindProcDLL_plug-in
 ; https://ko.osdn.net/projects/sfnet_findkillprocuni/releases/
 
+${ await this.checkAndCloseApp() }
+
+;----------------------------------------------------------
+; END
+        `;
+	}
+
+	// 기존에 실행중인 프로그램 종료.
+	protected async checkAndCloseApp(): Promise<string> {
+		return `
 Function CheckAndCloseApp
 	loop:
 		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
@@ -565,10 +551,23 @@ Function un.CheckAndCloseApp
 
 	done:
 FunctionEnd
+		`;
+	}
 
-;----------------------------------------------------------
-; 파일 설치, 제거
-;----------------------------------------------------------
+	//////////////////////////////////////////////////////////////////
+	// 파일 설치, 제거
+	//////////////////////////////////////////////////////////////////
+
+	protected async installAppLauncher(): Promise<string> {
+
+		let resourceExcludesString: string = '';
+		if(this.options.resource && this.options.resource.src) {
+			resourceExcludesString = ('/x "' + this.options.resource.src + '"');
+		}
+		return `
+;----------------------------
+; Launcher App 설치
+;----------------------------
 
 ; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
 ;SetOutPath $INSTDIR\\assets
@@ -603,12 +602,30 @@ Function un.Install_App_Launcher
 		RMDir /r \${CHROME_APP_LAUNCHER}
 	ok:
 FunctionEnd
+		`;
+	}
 
+	protected async installResource(): Promise<string> {
+		if(!this.options.resource || !this.options.resource.src || !this.options.resource.dest) {
+			return `
+Function Install_Resource
+FunctionEnd
+Function un.Install_Resource
+FunctionEnd
+			`;
+		}
+
+		return `
 ;----------------------------
 ; 버전별 리소스 폴더 생성
 ;----------------------------
 
+# 압축 파일 extract 정보 
+!define RESOURCE_SRC 				"${ win32.normalize(this.options.resource.src) }"
+!define RESOURCE_DEST 				"${ win32.normalize(this.options.resource.dest) }"
+
 Function Install_Resource
+	StrCmp "\${RESOURCE_DEST}" "" ok
 	RMDir /r 	"\${RESOURCE_DEST}"
 	
 	StrCmp "\${RESOURCE_SRC}" "" ok
@@ -625,10 +642,33 @@ Function un.Install_Resource
 		RMDir /r 	\${RESOURCE_DEST}
 	ok:
 FunctionEnd
+		`;
+	}
 
+	protected async installChildApp(): Promise<string> {
+		const childApp = this.options.childApp;
+		if(!childApp || !childApp.dest) {
+			return `
+Function Install_App_Child
+FunctionEnd
+Function un.Install_App_Child
+FunctionEnd
+			`;
+		}
+
+		// /x "assets" /x "package.json"
+		const childAppExcludesString = childApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
+		const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+
+		return `
 ;----------------------------
 ; Child App 복사
 ;----------------------------
+
+!define CHROME_APP_CHILD			"${ chromeAppName }"
+
+# 서브 App 리소스 (nwJS App) - 런처가 실행할 app
+!define CHILD_APP_DEST 				"${ childApp.dest ? win32.normalize(childApp.dest) : ''}"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -657,7 +697,7 @@ Function un.Install_App_Child
 		RMDir /r \${CHROME_APP_CHILD}
 	ok:
 FunctionEnd
-
-        `;
+		`;
 	}
+
 }
