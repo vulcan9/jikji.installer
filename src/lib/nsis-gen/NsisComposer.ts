@@ -67,6 +67,7 @@ export class NsisComposer {
 		// process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
 	}
 
+	// https://skql.tistory.com/507
 	// https://nsis.sourceforge.io/
 	// NSIS reference: https://nimto.tistory.com/m/71?category=174039
 	// NSIS reference 2 : https://nsis.sourceforge.io/Docs/Modern%20UI/Readme.html
@@ -272,7 +273,7 @@ LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		"\${PRODUCT_NAME} 프로
 # 이전 버전 삭제
 ;----------------------------------------------------------
 
-Section -$(TXT_SECTION_UNINSTALL)
+Section $(TXT_SECTION_UNINSTALL)
 	; 설치 섹션 "RO" 는 Read Only (해제 불가)
 	SectionIn RO
 
@@ -302,6 +303,14 @@ Section -$(TXT_SECTION_UNINSTALL)
 SectionEnd
 
 ;----------------------------------------------------------
+; 파일 설치, 제거
+;----------------------------------------------------------
+
+${ await this.installAppLauncher() }
+${ await this.installChildApp() }
+${ await this.installResource() }
+
+;----------------------------------------------------------
 # 설치 : 기본 파일 복사
 ;----------------------------------------------------------
 
@@ -313,10 +322,10 @@ Section !$(TXT_SECTION_COPY)
 	SetDetailsPrint listonly
 
 	; 설치 파일 복사 (런처)
-	Call Install_App_Launcher
+	!insertmacro Install_App_Launcher
 
 	; 런처 - app 호출 구조인 경우 sub app을 복사해둠
-	Call Install_App_Child
+	!insertmacro Install_App_Child
 	
 	;-------------
 	; 실행파일 등록
@@ -347,23 +356,19 @@ SectionEnd
 ; (...nsis/Plugins[/platform])
 ; https://nsis.sourceforge.io/Nsisunz_plug-in
 ; https://nsis.sourceforge.io/ZipDLL_plug-in
-; 한글 이름 파일에 대해서 압축 해지 에러 발생하므로 사용 안함
-; bat 파일로 unzip 실행 (해보지 않음)
 
 ; 버전별 리소스 폴더로 압축 해지하기
 Section $(TXT_SECTION_COPY_RESOURCE)
 	; 설치 섹션 "RO" 는 Read Only (해제 불가)
 	SectionIn RO
 
-	Call Install_Resource
+	!insertmacro Install_Resource
 	
 SectionEnd
 
 ;##########################################################
 ; 설치 (기타)
 ;##########################################################
-
-; File /nonfatal 은 특정 디렉토리가 없으면 오류없이 무시
 
 ;----------------------------------------------------------
 ; 프로그램 그룹 생성
@@ -486,14 +491,6 @@ Function un.onInit
 FunctionEnd
 
 ;----------------------------------------------------------
-; 파일 설치, 제거
-;----------------------------------------------------------
-
-${ await this.installAppLauncher() }
-${ await this.installChildApp() }
-${ await this.installResource() }
-
-;----------------------------------------------------------
 ; 기존에 실행중인 프로그램 종료.
 ;----------------------------------------------------------
 ; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
@@ -558,6 +555,15 @@ FunctionEnd
 	// 파일 설치, 제거
 	//////////////////////////////////////////////////////////////////
 
+	/*
+	; 파일 경로가 긴경우 "File: failed opening file" 에러 발생함
+	; https://stackoverrun.com/ko/q/7088595
+
+	; File /nonfatal 은 특정 디렉토리가 없으면 오류없이 무시
+	; macro를 사용해야 파일 사이즈가 자동으로 계산된다. (function 은 안됨)
+	;https://nsis.sourceforge.io/Macro_vs_Function
+	*/
+
 	protected async installAppLauncher(): Promise<string> {
 
 		let resourceExcludesString: string = '';
@@ -574,16 +580,16 @@ FunctionEnd
 ;File .\\assets\\*.*
 
 ; 설치 파일. resource는 별도로 설치 한다.
-Function Install_App_Launcher
+!macro Install_App_Launcher
 	SetOutPath "$INSTDIR"
 	;File /nonfatal /a /r .\\*.*
 	File /nonfatal /a /r ${resourceExcludesString} .\\*.*
-	
-FunctionEnd
+!macroend
 
 Function un.Install_App_Launcher
 	
 	; install 폴더 지우기.
+	; 해당 디렉터리에 설치한 파일 이외에 다른 파일이 있다면 해당 디렉터리는 삭제되지 않을 것임
 	RMDir /r "$INSTDIR"
 
 	; 파일이 아직 남아 있으면..
@@ -608,8 +614,8 @@ FunctionEnd
 	protected async installResource(): Promise<string> {
 		if(!this.options.resource || !this.options.resource.src || !this.options.resource.dest) {
 			return `
-Function Install_Resource
-FunctionEnd
+!macro Install_Resource
+!macroend
 Function un.Install_Resource
 FunctionEnd
 			`;
@@ -624,16 +630,16 @@ FunctionEnd
 !define RESOURCE_SRC 				"${ win32.normalize(this.options.resource.src) }"
 !define RESOURCE_DEST 				"${ win32.normalize(this.options.resource.dest) }"
 
-Function Install_Resource
+!macro Install_Resource
 	StrCmp "\${RESOURCE_DEST}" "" ok
 	RMDir /r 	"\${RESOURCE_DEST}"
 	
 	StrCmp "\${RESOURCE_SRC}" "" ok
 		SetOutPath				"\${RESOURCE_DEST}"
-		File /nonfatal /a /r 	"\${RESOURCE_SRC}\\*"
+		File /nonfatal /a /r 	\${RESOURCE_SRC}\\*
 		;File /nonfatal /a /r 	assets\\*
 	ok:
-FunctionEnd
+!macroend
 
 ; 버전별 리소스 폴더 삭제
 Function un.Install_Resource
@@ -649,8 +655,8 @@ FunctionEnd
 		const childApp = this.options.childApp;
 		if(!childApp || !childApp.dest) {
 			return `
-Function Install_App_Child
-FunctionEnd
+!macro Install_App_Child
+!macroend
 Function un.Install_App_Child
 FunctionEnd
 			`;
@@ -674,7 +680,7 @@ FunctionEnd
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
 ; nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
-Function Install_App_Child
+!macro Install_App_Child
 
 	StrCmp "\${CHILD_APP_DEST}" "" ok
 		StrCpy $9 "\${CHILD_APP_DEST}"
@@ -685,7 +691,7 @@ Function Install_App_Child
 		File /nonfatal /a /r ${childAppExcludesString} .\\*.*
 		;File /r /x "assets" /x "package.json" .\\*.*
 	ok:
-FunctionEnd
+!macroend
 
 Function un.Install_App_Child
 	; childApp 폴더 삭제

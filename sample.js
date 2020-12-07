@@ -76,11 +76,18 @@ function execute(command, options, cb) {
     if (options.shell === undefined) options.shell = true;
 
     // 실시간 로그 표시
-    var temp = exec(command, options, function(err){
-        if(err) console.error(err)
+    var child = exec(command, options, function(error, stdout, stderr){
+        if (error !== null) console.log('exec error: ', error);
+        if(stdout) console.log('stdout: ' + stdout);
+        if(stderr) console.log('stderr: ', stderr);
         if(cb) cb();
     });
-    temp.stdout.pipe(process.stdout);
+    // child.stdout.setEncoding('utf8');
+    // child.stdout.pipe(process.stdout);
+
+    child.on('close', function (code) {
+        console.log('# child process 닫기 ' + code);
+    });
 }
 
 //--------------------------
