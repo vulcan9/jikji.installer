@@ -81,9 +81,9 @@
             "programGroupName": "토브소프트"
         },
         "nsis": {
-            "icon": "./assets/install.ico",
-            "unIcon": "./assets/uninstall.ico",
-            "license": "./assets/LICENSE.txt",
+            "icon": "assets/install.ico",
+            "unIcon": "assets/uninstall.ico",
+            "license": "assets/LICENSE.txt",
             "web": "https://tovsoft.co.kr/",
             "diffUpdaters": false
         }

@@ -70,10 +70,15 @@ export class NsisComposer {
 	}
 
 	public async make(): Promise<string> {
-		
-		// 디버깅
-		// ;MessageBox MB_OK "${OTHER_UNINSTALL_DEST}"
-		
+
+		/*
+		; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
+		; $APPDATA (current:AppData/Roaming, all:ProgramData)
+		; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
+
+		;디버깅
+		;MessageBox MB_OK "${OTHER_UNINSTALL_DEST}"
+		*/
 		return `
 
 ;####################################################################################################################
@@ -84,9 +89,6 @@ export class NsisComposer {
 !define OUTFILE_NAME				"${ win32.normalize(resolve(this.options.output)) }"
 
 ; nw 실행시 생성되는 chrome app 폴더 경로
-; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
-; $APPDATA (current:AppData/Roaming, all:ProgramData)
-; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
 !define CHROME_APP_LAUNCHER 			"${ this.options.appName }"
 
 ;----------------------------------------------------------
@@ -316,11 +318,6 @@ FunctionEnd
         `;
 	}
 
-	// protected async NSISSettings(): Promise<string> {
-	// 	return `
-	// 	`;
-	// }
-
 	//////////////////////////////////////////////////////////////////
 	// MUI, Page
 	//////////////////////////////////////////////////////////////////
@@ -344,34 +341,34 @@ XPStyle						on										; xp manifest 사용 여부
 Name 						"\${PRODUCT_NAME}"						; 기본 이름
 OutFile 					"\${OUTFILE_NAME}"						; 출력 파일
 InstallDir 					"\${EXE_FILE_DIR}"						; 설치 폴더
+InstallDirRegKey			\${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
 
-InstallDirRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
-
-		`;
-	}
-
-	protected async MUISettings(): Promise<string> {
-		return `
 ;----------------------------------------------------------
 ; Request application privileges for Windows Vista
 ;----------------------------------------------------------
 RequestExecutionLevel admin
 
+		`;
+	}
+
+	// MUI (NSIS Modern User Interface)
+	// https://nsis.sourceforge.io/Docs/Modern%20UI/Readme.html
+	protected async MUISettings(): Promise<string> {
+		return `
 ;----------------------------------------------------------
-; include
+; MUI 화면 설정
 ;----------------------------------------------------------
 !include "MUI2.nsh"
 
-;----------------------------------------------------------
-; 인스톨러 & 언인스톨러 아이콘 설정
-;----------------------------------------------------------
-!define MUI_ICON 		"${ this.options.icon ? win32.normalize(resolve(this.options.icon)) : ''}"
-!define MUI_UNICON 		"${ this.options.unIcon ? win32.normalize(resolve(this.options.unIcon)) : ''}"
+BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
+
+#!define MUI_COMPONENTSPAGE_SMALLDESC						; 설치 옵션 설명칸이 작게..
+!define MUI_COMPONENTSPAGE_NODESC							; 설치 옵션 설명칸 없음
 
 ;----------------------------------------------------------
 ; installer or uninstaller 닫을 경우 경고 메시지 상자를 출력
 ;----------------------------------------------------------
-!define MUI_ABORTWARNING
+!define MUI_ABORTWARNING									; 설치 취소시 경고 메시지 뿌리기
 !define MUI_UNABORTWARNING
 
 ;----------------------------------------------------------
@@ -380,44 +377,47 @@ RequestExecutionLevel admin
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE						; 언인스톨 종료시 자동으로 닫히지 않게 하기.
 
-;##########################################################
-; MUI Pages
-;##########################################################
-
-#!define MUI_COMPONENTSPAGE_SMALLDESC						; 설치 옵션 설명칸이 작게..
-!define MUI_COMPONENTSPAGE_NODESC							; 설치 옵션 설명칸 없음
-
 !define MUI_FINISHPAGE_RUN 	"$INSTDIR\\\${EXE_FILE_FULL_NAME}"	; 종료후 프로그램 자동 실행 여부 물어 보기
 ;!define MUI_FINISHPAGE_RUN_NOTCHECKED						; 자동 실행을 기본적으로 체크 안하길 원할경우.
 
-# MUI 기본 설정 (잘 안쓰는것들)
-#!define MUI_HEADERBITMAP_RIGHT								; 헤더 비트맵을 오른쪽에 표시
-#!define MUI_ABORTWARNING									; 설치 취소시 경고 메시지 뿌리기
+;##########################################################
+; MUI Pages : https://nsis.sourceforge.io/Docs/Modern%20UI/Readme.html
+;##########################################################
+
+#!define MUI_THEME "\${NSISDIR}\\Contrib\\Graphics"
+!define MUI_THEME "\${NSISDIR}\\theme"
+
+!define MUI_INSTFILESPAGE_PROGRESSBAR colored				; Default: smooth ("" | colored | smooth)
 #!define MUI_INSTALLCOLORS	"FFFFFF 000000"					; 설치 화면 글자/배경색 지정
-#!define MUI_PROGRESSBAR 	colored
+#!define MUI_LICENSEPAGE_BGCOLOR /windows					; 라이센스 배경 컬러 (/windows | /grey | color)
+
+;----------------------------------------------------------
+; 인스톨러 & 언인스톨러 아이콘 설정
+;----------------------------------------------------------
+!define MUI_ICON 		"${ this.options.icon ? win32.normalize(resolve(this.options.icon)) : '\${MUI_THEME}\\install.ico'}"
+!define MUI_UNICON 		"${ this.options.unIcon ? win32.normalize(resolve(this.options.unIcon)) : '\${MUI_THEME}\\uninstall.ico'}"
 
 ;----------------------------------------------------------
 ; Page Design
 ;----------------------------------------------------------
-!define MUI_BGCOLOR FFFFFF ; Default: FFFFFF
 
-; installer or uninstaller Header image (150x57)
+#!define MUI_HEADERIMAGE_RIGHT								; 헤더 비트맵을 오른쪽에 표시
+#!define MUI_BGCOLOR FFFFFF 								; 헤더 배경색 Default: FFFFFF
+##!define MUI_TEXTCOLOR 000000 								; 헤더 글자색 Default: 000000
+#!define MUI_HEADER_TRANSPARENT_TEXT
+
+; Header image (150x53)
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP_NOSTRETCH
-!define MUI_HEADERIMAGE_BITMAP 				"\${NSISDIR}\\Contrib\\Graphics\\header\\orange.bmp"
+!define MUI_HEADERIMAGE_BITMAP 				"\${MUI_THEME}\\header.bmp"
 !define MUI_HEADERIMAGE_UNBITMAP_NOSTRETCH
-!define MUI_HEADERIMAGE_UNBITMAP 			"\${NSISDIR}\\Contrib\\Graphics\\Header\\orange-uninstall.bmp"
+!define MUI_HEADERIMAGE_UNBITMAP 			"\${MUI_THEME}\\header-uninstall.bmp"
 
-; installer Welcome & Finish page image (191x290)
+; Welcome & Finish page image (164x290)
 !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
-!define MUI_WELCOMEFINISHPAGE_BITMAP 		"\${NSISDIR}\\Contrib\\Graphics\\Wizard\\orange.bmp"
-
-; uninstaller Welcome & Finish page image (191x290)
+!define MUI_WELCOMEFINISHPAGE_BITMAP 		"\${MUI_THEME}\\wizard.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP_NOSTRETCH
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP 		"\${NSISDIR}\\Contrib\\Graphics\\Wizard\\orange-uninstall.bmp"
-
-BrandingText 								"\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
-LicenseBkColor								F5F5FF									; 라이센스 배경 컬러
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP 		"\${MUI_THEME}\\wizard-uninstall.bmp"
 
 		`;
 	}
@@ -439,7 +439,11 @@ LicenseBkColor								F5F5FF									; 라이센스 배경 컬러
 ;----------------------------------------------------------
 !insertmacro MUI_UNPAGE_WELCOME
 !insertmacro MUI_UNPAGE_CONFIRM							; 언인스톨
+#!insertmacro MUI_UNPAGE_LICENSE "textfile"
+#!insertmacro MUI_UNPAGE_COMPONENTS
+#!insertmacro MUI_UNPAGE_DIRECTORY
 !insertmacro MUI_UNPAGE_INSTFILES						; 파일 삭제 진행 상황
+#!insertmacro MUI_UNPAGE_FINISH
 
 		`;
 	}
