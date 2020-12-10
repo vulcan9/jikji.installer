@@ -1,9 +1,10 @@
 {
-    "name": "testApp4",
-    "domain": "jj.test.app",
+    "name": "testApp5",
+    "domain": "jikji.editor.testapp",
     "version": "0.1.10",
     "description": "epub 저작 도구",
     "main": "index.html",
+    "inject_js_start": "launcher.js",
     "scripts": {
         "build": "build --tasks win-x86 --mirror https://dl.nwjs.io/ .",
         "start": "run --x86 --mirror https://dl.nwjs.io/ ."
@@ -11,7 +12,7 @@
     "author": "evshiron",
     "license": "MIT",
     "window": {
-        "icon": "./assets/winIcon.png"
+        "icon": "assets/winIcon.png"
     },
     "nwjs-builder-phoenix-설정": "(diffUpdaters:true) versions.nsis.json 파일을 유지하면 update.exe 파일이 생성됨",
     "build": {
@@ -31,22 +32,35 @@
 
         "//resource": "(생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때",
         "resource": {
-            "src": "assets",
-            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/firstrun/0.30.0"
+            "src": "한글 폴더",
+            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/firstrun/한글 폴더"
         },
+
+        "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때",
+        "uninstall": "$LOCALAPPDATA/jikji.editor.demo.setup/test",
 
         "//childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때",
         "childApp": {
-            "name": "jikji.editor.demo",
+            "name": "jikji.editor.testapp",
             "excludes": [
-                "assets",
                 "package.json",
                 "test.bin",
                 "README.md",
                 "index.html"
             ],
-            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/app"
+            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/testapp"
         },
+
+        "associate": [{
+            "description": "JIK-JI Editor Project File",
+            "ext": "jik",
+            "fileClass": "Jik-ji.project",
+            "icon": "assets/exeIcon.ico"
+        },{
+            "ext": "jik2",
+            "fileClass": "Jik-ji.project2",
+            "icon": "assets/exeIcon.ico"
+        }],
 
         "strippedProperties": [
             "scripts",
@@ -61,7 +75,7 @@
             "publisher": "(주) 토브소프트",
             "fileDescription": "epub 저작 도구",
             "copyright": "tovsoft (c) 2020",
-            "icon": "./assets/exeIcon.ico",
+            "icon": "assets/exeIcon.ico",
             "exeName": "testApp3",
             "programGroupName": "토브소프트"
         },

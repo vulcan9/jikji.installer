@@ -612,7 +612,9 @@ export class Builder {
             // nwFiles: config.nwFiles,
             appName: config.appName,
             childApp: config.childApp,
-            resource: config.resource
+            resource: config.resource,
+            uninstall: config.uninstall,
+            associate: config.associate
 
         })).make();
 
@@ -754,7 +756,9 @@ export class Builder {
             // nwFiles: config.nwFiles,
             appName: config.appName,
             childApp: config.childApp,
-            resource: config.resource
+            resource: config.resource,
+            uninstall: config.uninstall,
+            associate: config.associate
 
         })).make();
 
@@ -829,7 +833,10 @@ export class Builder {
             // nwFiles: config.nwFiles,
             appName: config.appName,
             childApp: config.childApp,
-            resource: config.resource
+            resource: config.resource,
+            uninstall: config.uninstall,
+            associate: config.associate
+
         })).make();
 
         const script = await tmpName();

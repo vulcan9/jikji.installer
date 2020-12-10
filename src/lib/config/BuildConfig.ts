@@ -18,10 +18,13 @@ export class BuildConfig {
     public files: string[] = [ '**/*' ];
     public excludes: string[] = [];
 
-    // 압축 파일 풀기 기능 지원
-    public resource?: any = {}; // {src: string, dest: string}
-    // nwJS App 복사 기능 지원
-    public childApp?: any = {}; // {name: string, excludes?: string[], dest: string}
+    // 압축 파일 풀기 기능 지원 : {src: string, dest: string}
+    public resource?: any = {};
+    public uninstall?: string = '';
+    // 파일 확장자 등록 : [{description, ext, fileClass, icon}]
+    public associate?: any[] = [];
+    // nwJS App 복사 기능 지원 : {name: string, excludes?: string[], dest: string}
+    public childApp?: any = {};
     // public nwFiles: string[] = [];
     public appName: string = '';
 

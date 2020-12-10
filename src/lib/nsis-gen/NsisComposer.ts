@@ -34,6 +34,8 @@ export interface INsisComposerOptions {
 
 	// 압축 파일 풀기 기능 지원
 	resource?: any; // {src: string, dest: string};
+	uninstall?: string;
+	associate?: any[];
 	// App 복사 기능 지원
 	childApp?: {name: string, excludes?: string[], dest: string};
 	appName: string;
@@ -67,25 +69,16 @@ export class NsisComposer {
 		// process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
 	}
 
-	// https://skql.tistory.com/507
-	// https://nsis.sourceforge.io/
-	// NSIS reference: https://nimto.tistory.com/m/71?category=174039
-	// NSIS reference 2 : https://nsis.sourceforge.io/Docs/Modern%20UI/Readme.html
-	// 나무위키 : https://namu.wiki/w/NSIS
-	// 기본 구조 참고함 : https://wonsx.tistory.com/23
-	// 샘플 & 해설: https://m.blog.naver.com/PostView.nhn?blogId=ratmsma&logNo=40028387013&proxyReferer=https:%2F%2Fwww.google.com%2F
-	// 샘플2 : https://www.newnnow.co.kr/36
-	// http://csk6124-textcube.blogspot.com/2011/02/nsis.html
-	// https://jabis.tistory.com/3
-	// 설치후 사용자 권한으로 작업 실행
-	// http://egloos.zum.com/pelican7/v/3086158
-
 	public async make(): Promise<string> {
-
+		
+		// 디버깅
+		// ;MessageBox MB_OK "${OTHER_UNINSTALL_DEST}"
+		
 		return `
-;##########################################################
+
+;####################################################################################################################
 ; define Settings
-;##########################################################
+;####################################################################################################################
 
 # setup 파일 경로
 !define OUTFILE_NAME				"${ win32.normalize(resolve(this.options.output)) }"
@@ -120,10 +113,245 @@ export class NsisComposer {
 !define REG_APPDIR_KEY 			"Software\\Microsoft\\Windows\\CurrentVersion\\App Path\\\${EXE_FILE_FULL_NAME}"
 !define REG_UNINST_KEY 			"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${PRODUCT_NAME}"
 
-;####################################################################################################################
+;##########################################################
+; NSIS Settings
+;##########################################################
+
+${ await this.NSISSettings() }
+
+;##########################################################
 ; MUI Settings
+;##########################################################
+
+${ await this.MUISettings() }
+
+${ await this.MUIPages() }
+
+;----------------------------------------------------------
+; Language Files
+;----------------------------------------------------------
+!insertmacro MUI_LANGUAGE "Korean"						; 언어 설정.
+
+;####################################################################################################################
+; SECTION
 ;####################################################################################################################
 
+# 한글 특화 부분 - 이름에 따라서 바꿔주자.
+!define	EUL_RUL								"를"				; 을/를 문제 해결을 위한 define. $PRODUCT 에 따라 바뀐다.
+!define I_KA								"이"				; 이/가 문제 해결을 위한 define. $PRODUCT 에 따라 바뀐다.
+
+# 언어 설정
+LangString TXT_VERSION_UNINSTALL			\${LANG_KOREAN}		"이전 버전을 제거하는 중입니다. 잠시 기다려 주세요."
+LangString TXT_UNINSTALL					\${LANG_KOREAN}		"프로그램을 제거하는 중입니다. 잠시 기다려 주세요."
+LangString TXT_SECTION_UNINSTALL			\${LANG_KOREAN}		"이전 버전 삭제"
+LangString TXT_EXTRACTING					\${LANG_KOREAN}		"설치하는 동안 잠시 기다려 주세요."
+LangString TXT_SECTION_COPY					\${LANG_KOREAN}		"프로그램 설치"
+LangString TXT_SECTION_COPY_RESOURCE		\${LANG_KOREAN}		"구성 요소 설치"
+LangString TXT_SECTION_CREATEDESKTOPICON	\${LANG_KOREAN}		"바탕 화면에 단축 아이콘 생성"
+LangString TXT_SECTION_CREATEQUICKLAUNCH	\${LANG_KOREAN}		"빠른 실행 단축 아이콘 생성"
+LangString TXT_SECTION_CREATSTARTMENU		\${LANG_KOREAN}		"시작 메뉴 단축 아이콘 생성"
+
+LangString TXT_DELETE_ALL_FILES				\${LANG_KOREAN}		"프로그램이 설치된후 생성된 파일등이 설치 폴더($INSTDIR)에 일부 남아 있습니다.$\\r$\\n$\\r$\\n프로그램이 설치 되었던 폴더를 완전히 삭제하시겠습니까?"
+LangString TXT_PROGRAM_GROUP_NAME			\${LANG_KOREAN}		"\${PROGRAM_GROUP_NAME}"
+
+LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		"\${PRODUCT_NAME} 프로그램이 실행중 입니다.$\\r$\\n$\\r$\\n프로그램을 강제 종료하시겠습니까?"
+
+# Section 이름 : [/o] [([!]|[-])section_name] [section index output]
+; (!) 설치 구성요소 박스에서 BOLD 표시됨
+; (-) 감추기
+; (/o) 체크 해지 상태
+
+;##########################################################
+; 기능 정의
+;##########################################################
+
+${ await this.checkAndCloseApp() }
+
+${ await this.fileAssociation() }
+
+;##########################################################
+; 인스톨
+;##########################################################
+
+${ await this.prevUninstall() }
+
+;----------------------------------------------------------
+; 파일 설치, 제거
+;----------------------------------------------------------
+
+${ await this.installAppLauncher() }
+${ await this.installChildApp() }
+${ await this.installResource() }
+
+;----------------------------------------------------------
+# 설치 : 기본 파일 복사
+;----------------------------------------------------------
+
+Section !$(TXT_SECTION_COPY)
+	; 설치 섹션 "RO" 는 Read Only (해제 불가)
+	SectionIn RO
+
+	DetailPrint "프로그램을 $(TXT_EXTRACTING)"
+	SetDetailsPrint listonly
+
+	; 설치 파일 복사 (런처)
+	!insertmacro Install_App_Launcher
+
+	; 런처 - app 호출 구조인 경우 sub app을 복사해둠
+	!insertmacro Install_App_Child
+	
+	SetDetailsPrint both
+	
+	;-------------
+	; 실행파일 등록
+	; registry - installation path
+	WriteRegStr \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir" "$INSTDIR"
+	WriteRegStr \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "" 			"$INSTDIR\\\${EXE_FILE_FULL_NAME}"
+
+	;-------------
+	; registry - uninstall info
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayName" 			"$(^Name)"
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "UninstallString" 		"$INSTDIR\\\${UNINSTALL_NAME}"
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayIcon" 			"$INSTDIR\\\${EXE_FILE_FULL_NAME}"
+
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayVersion" 		"\${PRODUCT_VERSION}"
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "URLInfoAbout" 			"\${PRODUCT_WEBSITE}"
+	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "Publisher" 			"\${PRODUCT_PUBLISHER}"
+
+	; create Uninstaller
+	WriteUninstaller "$INSTDIR\\\${UNINSTALL_NAME}"
+
+	Call FileAssociate
+SectionEnd
+
+;----------------------------------------------------------
+# 설치 : 리소스 파일 복사
+;----------------------------------------------------------
+
+; 버전별 리소스 폴더로 압축 해지하기
+Section $(TXT_SECTION_COPY_RESOURCE)
+	; 설치 섹션 "RO" 는 Read Only (해제 불가)
+	SectionIn RO
+
+	DetailPrint "구성요소를 $(TXT_EXTRACTING)"
+	SetDetailsPrint listonly
+	
+	!insertmacro Install_Resource
+	
+	SetDetailsPrint both
+	
+SectionEnd
+
+;##########################################################
+; 설치 (기타)
+;##########################################################
+
+${ await this.createProgramGroup() }
+
+${ await this.createDesktopIcon() }
+
+${ await this.createQuickIcon() }
+
+;##########################################################
+; 언인스톨
+;##########################################################
+
+;----------------------------------------------------------
+; 언인스톨
+;----------------------------------------------------------
+
+Section Uninstall
+
+	DetailPrint $(TXT_UNINSTALL)
+	SetDetailsPrint listonly
+	
+	; uninstall 파일 지우기.
+	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
+
+	; 설치 파일 제거
+	Call un.Install_App_Launcher
+	Call un.Install_App_Child
+	Call un.Install_Resource
+
+	SetDetailsPrint both
+	
+	${ await this.deleteProgramGroup() }
+	${ await this.deleteIcons() }
+
+	;-------------
+	; 등록 정보 지우기
+	DeleteRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}"
+	DeleteRegKey \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}"
+
+	Call un.FileAssociate
+SectionEnd
+
+;####################################################################################################################
+; 유틸 함수
+;####################################################################################################################
+
+Function .onInit
+	; 기존에 실행중인 프로그램 종료.
+	Call CheckAndCloseApp
+FunctionEnd
+
+;설치실패시
+Function .onInstFailed
+	; 기존에 실행중인 프로그램 종료.
+	Call CheckAndCloseApp
+
+	Delete "$INSTDIR\\*.*"
+	RMDir /r "$INSTDIR"
+
+	SetAutoClose true
+FunctionEnd
+
+Function un.onInit
+	; 기존에 실행중인 프로그램 종료.
+	Call un.CheckAndCloseApp
+FunctionEnd
+
+;----------------------------------------------------------
+; END
+        `;
+	}
+
+	// protected async NSISSettings(): Promise<string> {
+	// 	return `
+	// 	`;
+	// }
+
+	//////////////////////////////////////////////////////////////////
+	// MUI, Page
+	//////////////////////////////////////////////////////////////////
+
+	protected async NSISSettings(): Promise<string> {
+		return `
+Unicode 					true
+SetCompress					off										; 압축 여부(auto|force|off) ( off 로 놓으면 테스트 하기 편하다 )
+#SetCompressor				lzma									; 압축방식 (zlib|bzip2|lzma)
+SetCompressor 				${ this.options.solid ? '/SOLID' : '' } ${ this.options.compression }
+
+ShowInstDetails 			hide									; 설치내용 자세히 보기 여부(hide|show|nevershow)
+ShowUninstDetails 			hide									; 언인스톨 자세히 보기 여부(hide|show|nevershow)
+SetOverwrite				on										; 파일 복사시 기본적으로 덮어쓰기 한다(디폴트) (on|off|try|ifnewer|lastused)
+
+AutoCloseWindow				true									; 완료후 설치프로그램 자동 닫기
+AllowRootDirInstall			false									; 루트 폴더에 설치하지 못하도록 한다.
+CRCCheck					on										; 시작시 CRC 검사를 한다. (디폴트) (on|off|force)
+XPStyle						on										; xp manifest 사용 여부
+
+Name 						"\${PRODUCT_NAME}"						; 기본 이름
+OutFile 					"\${OUTFILE_NAME}"						; 출력 파일
+InstallDir 					"\${EXE_FILE_DIR}"						; 설치 폴더
+
+InstallDirRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
+
+		`;
+	}
+
+	protected async MUISettings(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 ; Request application privileges for Windows Vista
 ;----------------------------------------------------------
@@ -191,30 +419,11 @@ RequestExecutionLevel admin
 BrandingText 								"\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 LicenseBkColor								F5F5FF									; 라이센스 배경 컬러
 
-;####################################################################################################################
-; NSIS Settings
-;####################################################################################################################
+		`;
+	}
 
-Unicode 					true
-SetCompress					off										; 압축 여부(auto|force|off) ( off 로 놓으면 테스트 하기 편하다 )
-#SetCompressor				lzma									; 압축방식 (zlib|bzip2|lzma)
-SetCompressor 				${ this.options.solid ? '/SOLID' : '' } ${ this.options.compression }
-
-ShowInstDetails 			show									; 설치내용 자세히 보기 여부(hide|show|nevershow)
-ShowUninstDetails 			show									; 언인스톨 자세히 보기 여부(hide|show|nevershow)
-SetOverwrite				on										; 파일 복사시 기본적으로 덮어쓰기 한다(디폴트) (on|off|try|ifnewer|lastused)
-
-AutoCloseWindow				true									; 완료후 설치프로그램 자동 닫기
-AllowRootDirInstall			false									; 루트 폴더에 설치하지 못하도록 한다.
-CRCCheck					on										; 시작시 CRC 검사를 한다. (디폴트) (on|off|force)
-XPStyle						on										; xp manifest 사용 여부
-
-Name 						"\${PRODUCT_NAME}"						; 기본 이름
-OutFile 					"\${OUTFILE_NAME}"						; 출력 파일
-InstallDir 					"\${EXE_FILE_DIR}"						; 설치 폴더
-
-InstallDirRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
-
+	protected async MUIPages(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 ; Installer page
 ;----------------------------------------------------------
@@ -232,43 +441,15 @@ InstallDirRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
 !insertmacro MUI_UNPAGE_CONFIRM							; 언인스톨
 !insertmacro MUI_UNPAGE_INSTFILES						; 파일 삭제 진행 상황
 
-;----------------------------------------------------------
-; Language Files
-;----------------------------------------------------------
-!insertmacro MUI_LANGUAGE "Korean"						; 언어 설정.
+		`;
+	}
 
-;####################################################################################################################
-; SECTION
-;####################################################################################################################
+	//////////////////////////////////////////////////////////////////
+	// SECTION
+	//////////////////////////////////////////////////////////////////
 
-# 한글 특화 부분 - 이름에 따라서 바꿔주자.
-!define	EUL_RUL								"를"				; 을/를 문제 해결을 위한 define. $PRODUCT 에 따라 바뀐다.
-!define I_KA								"이"				; 이/가 문제 해결을 위한 define. $PRODUCT 에 따라 바뀐다.
-
-# 언어 설정
-LangString TXT_UNINSTALL					\${LANG_KOREAN}		"이전 버전을 제거하는 중입니다. 잠시 기다려 주세요."
-LangString TXT_SECTION_UNINSTALL			\${LANG_KOREAN}		"이전 버전 삭제"
-LangString TXT_EXTRACTING					\${LANG_KOREAN}		"설치하는 동안 잠시 기다려 주세요."
-LangString TXT_SECTION_COPY					\${LANG_KOREAN}		"프로그램 설치"
-LangString TXT_SECTION_COPY_RESOURCE		\${LANG_KOREAN}		"구성 요소 설치"
-LangString TXT_SECTION_CREATEDESKTOPICON	\${LANG_KOREAN}		"바탕 화면에 단축 아이콘 생성"
-LangString TXT_SECTION_CREATEQUICKLAUNCH	\${LANG_KOREAN}		"빠른 실행 단축 아이콘 생성"
-LangString TXT_SECTION_CREATSTARTMENU		\${LANG_KOREAN}		"시작 메뉴 단축 아이콘 생성"
-
-LangString TXT_DELETE_ALL_FILES				\${LANG_KOREAN}		"프로그램이 설치된후 생성된 파일등이 설치 폴더($INSTDIR)에 일부 남아 있습니다.$\\r$\\n$\\r$\\n프로그램이 설치 되었던 폴더를 완전히 삭제하시겠습니까?"
-LangString TXT_PROGRAM_GROUP_NAME			\${LANG_KOREAN}		"\${PROGRAM_GROUP_NAME}"
-
-LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		"\${PRODUCT_NAME} 프로그램이 실행중 입니다.$\\r$\\n$\\r$\\n프로그램을 강제 종료하시겠습니까?"
-
-# Section 이름 : [/o] [([!]|[-])section_name] [section index output]
-; (!) 설치 구성요소 박스에서 BOLD 표시됨
-; (-) 감추기
-; (/o) 체크 해지 상태
-
-;##########################################################
-; 인스톨
-;##########################################################
-
+	protected async prevUninstall(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 # 이전 버전 삭제
 ;----------------------------------------------------------
@@ -283,7 +464,8 @@ Section $(TXT_SECTION_UNINSTALL)
 	StrCmp "$6" "" done
 
 	ClearErrors
-	DetailPrint $(TXT_UNINSTALL)
+	DetailPrint $(TXT_VERSION_UNINSTALL)
+	SetDetailsPrint listonly		; none|listonly|textonly|both|lastused
 	
 	; 실행 종료시까지 기다림 (/S: silent)
 	ExecWait "$6 /S _?=$INSTDIR" ;Do not copy the uninstaller to a temp file
@@ -299,77 +481,15 @@ Section $(TXT_SECTION_UNINSTALL)
 	*/
   
 	done:
-
+		SetDetailsPrint both
+		
 SectionEnd
 
-;----------------------------------------------------------
-; 파일 설치, 제거
-;----------------------------------------------------------
+		`;
+	}
 
-${ await this.installAppLauncher() }
-${ await this.installChildApp() }
-${ await this.installResource() }
-
-;----------------------------------------------------------
-# 설치 : 기본 파일 복사
-;----------------------------------------------------------
-
-Section !$(TXT_SECTION_COPY)
-	; 설치 섹션 "RO" 는 Read Only (해제 불가)
-	SectionIn RO
-
-	DetailPrint $(TXT_EXTRACTING)
-	SetDetailsPrint listonly
-
-	; 설치 파일 복사 (런처)
-	!insertmacro Install_App_Launcher
-
-	; 런처 - app 호출 구조인 경우 sub app을 복사해둠
-	!insertmacro Install_App_Child
-	
-	;-------------
-	; 실행파일 등록
-	; registry - installation path
-	WriteRegStr \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir" "$INSTDIR"
-	WriteRegStr \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "" 			"$INSTDIR\\\${EXE_FILE_FULL_NAME}"
-
-	;-------------
-	; registry - uninstall info
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayName" 			"$(^Name)"
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "UninstallString" 		"$INSTDIR\\\${UNINSTALL_NAME}"
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayIcon" 			"$INSTDIR\\\${EXE_FILE_FULL_NAME}"
-
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "DisplayVersion" 		"\${PRODUCT_VERSION}"
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "URLInfoAbout" 			"\${PRODUCT_WEBSITE}"
-	WriteRegStr \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}" "Publisher" 			"\${PRODUCT_PUBLISHER}"
-
-	; create Uninstaller
-	WriteUninstaller "$INSTDIR\\\${UNINSTALL_NAME}"
-
-SectionEnd
-
-;----------------------------------------------------------
-# 설치 : 리소스 파일 복사
-;----------------------------------------------------------
-
-; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
-; (...nsis/Plugins[/platform])
-; https://nsis.sourceforge.io/Nsisunz_plug-in
-; https://nsis.sourceforge.io/ZipDLL_plug-in
-
-; 버전별 리소스 폴더로 압축 해지하기
-Section $(TXT_SECTION_COPY_RESOURCE)
-	; 설치 섹션 "RO" 는 Read Only (해제 불가)
-	SectionIn RO
-
-	!insertmacro Install_Resource
-	
-SectionEnd
-
-;##########################################################
-; 설치 (기타)
-;##########################################################
-
+	protected async createProgramGroup(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 ; 프로그램 그룹 생성
 ;----------------------------------------------------------
@@ -385,7 +505,7 @@ Section $(TXT_SECTION_CREATSTARTMENU)
 
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_PROGG}
 	SetOutPath			"$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\"
-	SetOutPath			$INSTDIR
+	SetOutPath			"$INSTDIR"
 	CreateShortCut		"$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"			"$INSTDIR\\\${EXE_FILE_FULL_NAME}" 	"" "" 0
 	CreateShortCut		"$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"	"$INSTDIR\\\${UNINSTALL_NAME}"	"" "" 0
 
@@ -394,11 +514,16 @@ Section $(TXT_SECTION_CREATSTARTMENU)
 
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_ICON}
 	SetOutPath			"$STARTMENU\\Programs\\$(TXT_PROGRAM_GROUP_NAME)\\"
-	SetOutPath			$INSTDIR
+	SetOutPath			"$INSTDIR"
 	CreateShortCut		"$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk" 		"$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
 	CreateShortCut		"$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"	"$INSTDIR\\\${UNINSTALL_NAME}"	"" "" 0
 SectionEnd
 
+		`;
+	}
+
+	protected async createDesktopIcon(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 ; 바탕화면에 바로가기 아이콘 - $DESKTOP
 ;----------------------------------------------------------
@@ -409,6 +534,11 @@ Section $(TXT_SECTION_CREATEDESKTOPICON)
 	CreateShortCut 		"$DESKTOP\\\${EXE_FILE_NAME}.lnk" "$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
 SectionEnd
 
+		`;
+	}
+
+	protected async createQuickIcon(): Promise<string> {
+		return `
 ;----------------------------------------------------------
 ; 빠른 실행 아이콘 - $QUICKLAUNCH (도구 모음 > shell:quick launch)
 ;----------------------------------------------------------
@@ -419,24 +549,11 @@ Section $(TXT_SECTION_CREATEQUICKLAUNCH)
 	CreateShortCut		"$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk" "$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
 SectionEnd
 
-;##########################################################
-; 언인스톨
-;##########################################################
+		`;
+	}
 
-;----------------------------------------------------------
-; 언인스톨
-;----------------------------------------------------------
-
-Section Uninstall
-
-	; uninstall 파일 지우기.
-	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
-
-	; 설치 파일 제거
-	Call un.Install_App_Launcher
-	Call un.Install_App_Child
-	Call un.Install_Resource
-
+	protected async deleteProgramGroup(): Promise<string> {
+		return `
 	;-------------
 	; 프로그램 그룹 지우기
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_PROGG}								; 설치할때 프로그램 그룹이 설치된 위치.
@@ -445,6 +562,11 @@ Section Uninstall
 	SetShellVarContext	\${SHELL_VAR_CONTEXT_ICON}
 	RMDir /r			"$STARTMENU\\Programs\\$(TXT_PROGRAM_GROUP_NAME)\\"		; 시작 메뉴 아이콘 그룹 지우기
 
+		`;
+	}
+
+	protected async deleteIcons(): Promise<string> {
+		return `
 	;-------------
 	; 단축 아이콘 지우기
 	SetShellVarContext current									; current 시작 단축 아이콘 지우기
@@ -452,102 +574,13 @@ Section Uninstall
 		Delete	"$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk"					; 빠른 실행
 		;Delete	"$STARTMENU\\Programs\\(EXE_FILE_NAME).lnk"				; 시작 메뉴
 		;Delete	"$SMSTARTUP\\\${EXE_FILE_NAME}.lnk"
+		
 	SetShellVarContext all										; all 시작 단축 아이콘 지우기
 		Delete	"$DESKTOP\\\${EXE_FILE_NAME}.lnk"						; 바탕화면 단축 아이콘
 		Delete	"$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk"					; 빠른 실행
 		;Delete	"$STARTMENU\\Programs\\\${EXE_FILE_NAME}.lnk"			; 시작 메뉴
 		;Delete	"$SMSTARTUP\\\${EXE_FILE_NAME}.lnk"
-
-	;-------------
-	; 등록 정보 지우기
-	DeleteRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}"
-	DeleteRegKey \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}"
-
-SectionEnd
-
-;####################################################################################################################
-; 유틸 함수
-;####################################################################################################################
-
-Function .onInit
-	; 기존에 실행중인 프로그램 종료.
-	Call CheckAndCloseApp
-FunctionEnd
-
-;설치실패시
-Function .onInstFailed
-	; 기존에 실행중인 프로그램 종료.
-	Call CheckAndCloseApp
-
-	Delete "$INSTDIR\\*.*"
-	RMDir /r "$INSTDIR"
-
-	SetAutoClose true
-FunctionEnd
-
-Function un.onInit
-	; 기존에 실행중인 프로그램 종료.
-	Call un.CheckAndCloseApp
-FunctionEnd
-
-;----------------------------------------------------------
-; 기존에 실행중인 프로그램 종료.
-;----------------------------------------------------------
-; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
-; (...nsis/Plugins[/platform])
-; https://nsis.sourceforge.io/FindProcDLL_plug-in
-; https://ko.osdn.net/projects/sfnet_findkillprocuni/releases/
-
-${ await this.checkAndCloseApp() }
-
-;----------------------------------------------------------
-; END
-        `;
-	}
-
-	// 기존에 실행중인 프로그램 종료.
-	protected async checkAndCloseApp(): Promise<string> {
-		return `
-Function CheckAndCloseApp
-	loop:
-		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
-		StrCmp $R0 1 processFound done
-
-	processFound:
-		StrCmp $R8 "first" kill
-
-		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
-		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
-		StrCpy $R8 "first"
-		Goto kill
-
-	kill:
-		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
-		Goto loop
-
-	done:
-FunctionEnd
-
-; (uninstall) 기존에 실행중인 프로그램 종료.
-Function un.CheckAndCloseApp
-	loop:
-		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
-		StrCmp $R0 1 processFound done
-
-	processFound:
-		StrCmp $R8 "first" kill
-
-		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
-		MessageBox MB_ICONINFORMATION|MB_YESNO "삭제할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
-		StrCpy $R8 "first"
-		Goto kill
-
-	kill:
-		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
-		Goto loop
-
-	done:
-FunctionEnd
+		
 		`;
 	}
 
@@ -605,47 +638,7 @@ Function un.Install_App_Launcher
 	; nw 실행시 생성되는 chrome app 폴더 삭제
 	StrCmp "\${CHROME_APP_LAUNCHER}" "" ok
 		;MessageBox MB_OK "삭제: \${CHROME_APP_LAUNCHER}"
-		RMDir /r \${CHROME_APP_LAUNCHER}
-	ok:
-FunctionEnd
-		`;
-	}
-
-	protected async installResource(): Promise<string> {
-		if(!this.options.resource || !this.options.resource.src || !this.options.resource.dest) {
-			return `
-!macro Install_Resource
-!macroend
-Function un.Install_Resource
-FunctionEnd
-			`;
-		}
-
-		return `
-;----------------------------
-; 버전별 리소스 폴더 생성
-;----------------------------
-
-# 압축 파일 extract 정보 
-!define RESOURCE_SRC 				"${ win32.normalize(this.options.resource.src) }"
-!define RESOURCE_DEST 				"${ win32.normalize(this.options.resource.dest) }"
-
-!macro Install_Resource
-	StrCmp "\${RESOURCE_DEST}" "" ok
-	RMDir /r 	"\${RESOURCE_DEST}"
-	
-	StrCmp "\${RESOURCE_SRC}" "" ok
-		SetOutPath				"\${RESOURCE_DEST}"
-		File /nonfatal /a /r 	\${RESOURCE_SRC}\\*
-		;File /nonfatal /a /r 	assets\\*
-	ok:
-!macroend
-
-; 버전별 리소스 폴더 삭제
-Function un.Install_Resource
-	StrCmp "\${RESOURCE_DEST}" "" ok
-		Delete 		\${RESOURCE_DEST}\\*.*
-		RMDir /r 	\${RESOURCE_DEST}
+		RMDir /r "\${CHROME_APP_LAUNCHER}"
 	ok:
 FunctionEnd
 		`;
@@ -695,14 +688,222 @@ FunctionEnd
 
 Function un.Install_App_Child
 	; childApp 폴더 삭제
-	RMDir /r \${CHILD_APP_DEST}
+	RMDir /r "\${CHILD_APP_DEST}"
 	
 	; nw 실행시 생성되는 chrome app 폴더 삭제
 	StrCmp "\${CHROME_APP_CHILD}" "" ok
 		;MessageBox MB_OK "삭제: \${CHROME_APP_CHILD}"
-		RMDir /r \${CHROME_APP_CHILD}
+		RMDir /r "\${CHROME_APP_CHILD}"
 	ok:
 FunctionEnd
+		`;
+	}
+
+	/*
+    ; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
+    ; (...nsis/Plugins[/platform])
+    ; https://nsis.sourceforge.io/Nsisunz_plug-in
+    ; https://nsis.sourceforge.io/ZipDLL_plug-in
+    */
+	protected async installResource(): Promise<string> {
+		const empty = `
+!macro Install_Resource
+!macroend
+Function un.Install_Resource
+FunctionEnd
+		`;
+
+		const resource: any = this.options.resource;
+		const otherUninstall = this.options.uninstall ? win32.normalize(this.options.uninstall) : '';
+		if(!resource && !otherUninstall) return empty;
+
+		const resourceSrc = resource.src ? win32.normalize(resource.src) : '';
+		const resourceDest = resource.dest ? win32.normalize(resource.dest) : '';
+
+		return `
+;----------------------------
+; 버전별 리소스 폴더 생성
+;----------------------------
+
+# 압축 파일 extract 정보 
+!define RESOURCE_SRC 				"${ resourceSrc }"
+!define RESOURCE_DEST 				"${ resourceDest }"
+!define OTHER_UNINSTALL_DEST 		"${ otherUninstall }"
+
+!macro Install_Resource
+	StrCmp "\${RESOURCE_DEST}" "" ok
+	RMDir /r 	"\${RESOURCE_DEST}"
+	
+	StrCmp "\${RESOURCE_SRC}" "" ok
+		SetOutPath				"\${RESOURCE_DEST}"
+		File /nonfatal /a /r 	"\${RESOURCE_SRC}\\*"
+		;File /nonfatal /a /r 	assets\\*
+	ok:
+!macroend
+
+; 버전별 리소스 폴더 삭제
+Function un.Install_Resource
+	StrCmp "\${RESOURCE_DEST}" "" skipDest
+		Delete 		"\${RESOURCE_DEST}\\*.*"
+		RMDir /r 	"\${RESOURCE_DEST}"
+		
+	skipDest:
+		; 추가로 지정한 폴더 지우기
+		StrCmp "\${OTHER_UNINSTALL_DEST}" "" ok
+			Delete 		"\${OTHER_UNINSTALL_DEST}\\*.*"
+			RMDir /r 	"\${OTHER_UNINSTALL_DEST}"
+			
+			; 파일이 아직 남아 있으면..
+			IfFileExists \${OTHER_UNINSTALL_DEST}*.* 0 ok
+				RMDir /r 		"\${OTHER_UNINSTALL_DEST}"
+				RMDir /REBOOTOK "\${OTHER_UNINSTALL_DEST}"
+	ok:
+FunctionEnd
+		`;
+	}
+
+	//////////////////////////////////////////////////////////////////
+	// Util
+	//////////////////////////////////////////////////////////////////
+
+	/*
+	; 기존에 실행중인 프로그램 종료.
+	; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
+	; (...nsis/Plugins[/platform])
+	; https://nsis.sourceforge.io/FindProcDLL_plug-in
+	; https://ko.osdn.net/projects/sfnet_findkillprocuni/releases/
+    */
+
+	protected async checkAndCloseApp(): Promise<string> {
+		return `
+;----------------------------------------------------------
+; 기존에 실행중인 프로그램 종료.
+;----------------------------------------------------------
+
+Function CheckAndCloseApp
+	loop:
+		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
+		StrCmp $R0 1 processFound done
+
+	processFound:
+		StrCmp $R8 "first" kill
+
+		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
+		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
+		StrCpy $R8 "first"
+		Goto kill
+
+	kill:
+		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
+		Goto loop
+
+	done:
+FunctionEnd
+
+; (uninstall) 기존에 실행중인 프로그램 종료.
+Function un.CheckAndCloseApp
+	loop:
+		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
+		StrCmp $R0 1 processFound done
+
+	processFound:
+		StrCmp $R8 "first" kill
+
+		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
+		MessageBox MB_ICONINFORMATION|MB_YESNO "삭제할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
+		StrCpy $R8 "first"
+		Goto kill
+
+	kill:
+		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
+		Goto loop
+
+	done:
+FunctionEnd
+		`;
+	}
+
+	/*
+	; 파일 실행 확장자 등록
+	; FileAssociation.nsh : 설치 폴더\NSIS\Include 에 집어 넣음
+	; https://nsis.sourceforge.io/File_Association
+	;!include "FileAssociation.nsh"
+	*/
+	protected async fileAssociation(): Promise<string> {
+		const associate = this.options.associate;
+		if(!associate || associate.length < 1) {
+			return `
+Function FileAssociate
+FunctionEnd
+Function un.FileAssociate
+FunctionEnd
+			`;
+		}
+
+		// associate: [{ext, fileClass, description, icon}]
+		const exePath = '$INSTDIR\\\${EXE_FILE_FULL_NAME}';
+		const APP_ASSOCIATE = associate.map((info) => {
+			if(!info.ext) return '';
+
+			const ext = info.ext;
+			const fileClass = info.fileClass || ('Ext.' + ext);
+			const description = info.description || '';
+			const icon = '$INSTDIR\\' + win32.normalize(info.icon) || exePath + ',0';
+			const commandText = info.commandText || 'Open with \${EXE_FILE_NAME} Application';
+			const command = info.command || exePath + ' $\\"%1$\\"';
+
+			/*
+			;!insertmacro APP_ASSOCIATE 		"확장자명" "확장자 유형" "확장자 설명"
+			;									"아이콘"
+			;									"COMMANDTEXT" "COMMAND"
+
+			!insertmacro APP_ASSOCIATE 			"jik" "Jik-ji.project" "JIK-JI Editor Project File"
+												"$INSTDIR\assets\exeIcon.ico"
+												"Open with Jik-ji Editor" "$INSTDIR\${EXE_FILE_FULL_NAME} $\"%1$\""
+			!insertmacro APP_ASSOCIATE 			"jikp" "Jik-ji.project" "JIK-JI Editor Project File"
+												"$INSTDIR\assets\exeIcon.ico"
+												"Open with Jik-ji Editor" "$INSTDIR\${EXE_FILE_FULL_NAME} $\"%1$\""
+			*/
+			// 	!insertmacro APP_ASSOCIATE "확장자명" "확장자 유형" "확장자 설명" "아이콘" "COMMANDTEXT" "COMMAND"
+			return `!insertmacro APP_ASSOCIATE "${ext}" "${fileClass}" "${description}" "${icon}" "${commandText}" "${command}"`;
+		}).join('\n\t');
+
+		const APP_UNASSOCIATE = associate.map((info) => {
+			if(!info.ext) return '';
+			const ext = info.ext;
+			const fileClass = info.fileClass || ('Ext.' + ext);
+
+			/*
+            ; !insertmacro APP_UNASSOCIATE 		"확장자명" "확장자 유형"
+            !insertmacro APP_UNASSOCIATE 		"jik" "Jikji.project"
+            !insertmacro APP_UNASSOCIATE 		"jikp" "Jikji.project"
+            */
+			// !insertmacro APP_UNASSOCIATE	"jikp" "Jikji.project"
+			return `!insertmacro APP_UNASSOCIATE "${ext}" "${fileClass}"`;
+		}).join('\n\t');
+
+		return `
+;----------------------------------------------------------
+; 파일 실행 확장자 등록
+;----------------------------------------------------------
+
+; File Association
+!include "FileAssociation.nsh"
+
+Function FileAssociate
+	${ APP_ASSOCIATE }
+	
+	; explorer 갱신
+	!insertmacro UPDATEFILEASSOC
+FunctionEnd
+
+Function un.FileAssociate
+	${ APP_UNASSOCIATE }
+	
+	; explorer 갱신
+	!insertmacro UPDATEFILEASSOC
+FunctionEnd
+
 		`;
 	}
 
