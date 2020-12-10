@@ -57,6 +57,7 @@
             "fileClass": "Jik-ji.project",
             "icon": "assets/exeIcon.ico"
         },{
+            "description": "JIK-JI Editor Project File",
             "ext": "jik2",
             "fileClass": "Jik-ji.project2",
             "icon": "assets/exeIcon.ico"
