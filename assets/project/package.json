@@ -53,13 +53,8 @@
 
         "associate": [{
             "description": "JIK-JI Editor Project File",
-            "ext": "jik",
-            "fileClass": "Jik-ji.project",
-            "icon": "assets/exeIcon.ico"
-        },{
-            "description": "JIK-JI Editor Project File",
-            "ext": "jik2",
-            "fileClass": "Jik-ji.project2",
+            "ext": "ta5",
+            "fileClass": "Testapp5.project",
             "icon": "assets/exeIcon.ico"
         }],
 
