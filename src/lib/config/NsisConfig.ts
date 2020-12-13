@@ -1,8 +1,7 @@
 
 export class NsisConfig {
 
-    public icon: string = undefined;
-    public unIcon: string = undefined;
+    public theme: string = undefined;
     public license: string = undefined;
     public web: string = undefined;
 

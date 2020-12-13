@@ -595,8 +595,7 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
-            unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
             license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
             web: config.nsis.web,
 
@@ -739,8 +738,7 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
-            unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
             license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
             web: config.nsis.web,
 
@@ -816,8 +814,7 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            icon: config.nsis.icon ? resolve(this.dir, config.nsis.icon) : undefined,
-            unIcon: config.nsis.unIcon ? resolve(this.dir, config.nsis.unIcon) : undefined,
+            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
             license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
             web: config.nsis.web,
 

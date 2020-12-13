@@ -14,8 +14,7 @@ export interface INsisComposerOptions {
 	copyright: string;
 	publisher?: string;
 
-	icon: string;
-	unIcon: string;
+	theme: string;
 	license: string;
 	web: string;
 
@@ -385,25 +384,25 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 ;##########################################################
 
 #!define MUI_THEME "\${NSISDIR}\\Contrib\\Graphics"
-!define MUI_THEME "\${NSISDIR}\\theme"
+!define MUI_THEME "${ this.options.theme ? win32.normalize(resolve(this.options.theme)) : '\${NSISDIR}\\theme'}"
 
 !define MUI_INSTFILESPAGE_PROGRESSBAR colored				; Default: smooth ("" | colored | smooth)
-#!define MUI_INSTALLCOLORS	"FFFFFF 000000"					; 설치 화면 글자/배경색 지정
+!define MUI_INSTALLCOLORS	"203864 bdc4d1"					; 설치 화면 글자/배경색 지정
 #!define MUI_LICENSEPAGE_BGCOLOR /windows					; 라이센스 배경 컬러 (/windows | /grey | color)
 
 ;----------------------------------------------------------
 ; 인스톨러 & 언인스톨러 아이콘 설정
 ;----------------------------------------------------------
-!define MUI_ICON 		"${ this.options.icon ? win32.normalize(resolve(this.options.icon)) : '\${MUI_THEME}\\install.ico'}"
-!define MUI_UNICON 		"${ this.options.unIcon ? win32.normalize(resolve(this.options.unIcon)) : '\${MUI_THEME}\\uninstall.ico'}"
+!define MUI_ICON 							"\${MUI_THEME}\\install.ico"
+!define MUI_UNICON 							"\${MUI_THEME}\\uninstall.ico"
 
 ;----------------------------------------------------------
 ; Page Design
 ;----------------------------------------------------------
 
 #!define MUI_HEADERIMAGE_RIGHT								; 헤더 비트맵을 오른쪽에 표시
-#!define MUI_BGCOLOR FFFFFF 								; 헤더 배경색 Default: FFFFFF
-##!define MUI_TEXTCOLOR 000000 								; 헤더 글자색 Default: 000000
+#!define MUI_BGCOLOR 203864 									; 헤더 배경색 Default: FFFFFF
+#!define MUI_TEXTCOLOR bdc4d1 								; 헤더 글자색 Default: 000000
 #!define MUI_HEADER_TRANSPARENT_TEXT
 
 ; Header image (150x53)
