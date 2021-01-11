@@ -401,7 +401,7 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 ;----------------------------------------------------------
 
 #!define MUI_HEADERIMAGE_RIGHT								; 헤더 비트맵을 오른쪽에 표시
-#!define MUI_BGCOLOR 203864 									; 헤더 배경색 Default: FFFFFF
+#!define MUI_BGCOLOR 203864 								; 헤더 배경색 Default: FFFFFF
 #!define MUI_TEXTCOLOR bdc4d1 								; 헤더 글자색 Default: 000000
 #!define MUI_HEADER_TRANSPARENT_TEXT
 

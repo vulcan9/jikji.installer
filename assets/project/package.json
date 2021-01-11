@@ -1,7 +1,7 @@
 {
     "name": "testApp5",
     "domain": "jikji.editor.testapp",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "description": "epub 저작 도구",
     "main": "index.html",
     "inject_js_start": "launcher.js",
