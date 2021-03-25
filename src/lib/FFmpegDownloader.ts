@@ -77,6 +77,7 @@ export class FFmpegDownloader extends DownloaderBase {
         debug('in fetch', 'url', url);
         debug('in fetch', 'filename', filename);
         debug('in fetch', 'path', path);
+        debug('in fetch', 'forceCaches', this.options.forceCaches);
 
         if (this.options.forceCaches && await this.isFileExists(path)) {
             return path;

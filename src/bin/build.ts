@@ -71,7 +71,8 @@ const argv = require('yargs')
         chromeApp: argv['chrome-app'],
         mirror: argv.mirror,
         concurrent: argv.concurrent,
-        mute: false,
+        mute: argv.mute,
+        forceCaches: argv.forceCaches
     }, argv._.shift());
 
     await builder.build();

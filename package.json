@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.15.14",
+    "version": "1.15.15",
     "description": "jik-ji editor installer",
     "main": "./dist/lib/index.js",
     "types": "./dist/lib/index.d.ts",

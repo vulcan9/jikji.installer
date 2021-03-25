@@ -556,6 +556,7 @@ export class Builder {
             useCaches: true,
             showProgress: this.options.mute ? false : true,
             destination: this.options.destination,
+            forceCaches: this.options.forceCaches
         });
 
         if(!this.options.mute) {
