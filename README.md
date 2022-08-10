@@ -49,7 +49,7 @@ DO NOT install it globally, as the command names are just too common.
 
 * Add `build` properties at the root of the `package.json`, for example:
 
-```json
+```
 // package.json
 {
     "build": {
@@ -62,7 +62,7 @@ This will specify the NW.js version we are using. See more in the following Opti
 
 * Add some helper npm scripts, for example:
 
-```javascript
+```
 // package.json
 {
     "scripts": {
@@ -118,3 +118,36 @@ If you have difficulties connecting to the official download source, you can spe
 ## License
 
 MIT.
+
+
+------------------------------------------------------
+
+# install 파일 생성 샘플 프로젝트
+
+```
+소스 폴더: assets/project 폴더 내용을 install 파일로 만듬
+빌드 실행: npm run sample
+빌드 결과: dist_sample
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

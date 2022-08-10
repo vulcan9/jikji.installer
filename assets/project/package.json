@@ -39,7 +39,7 @@
         "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때",
         "uninstall": "$LOCALAPPDATA/jikji.editor.demo.setup/test",
 
-        "//childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때",
+        "//childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)",
         "childApp": {
             "name": "jikji.editor.testapp",
             "excludes": [

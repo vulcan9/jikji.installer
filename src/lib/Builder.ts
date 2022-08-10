@@ -836,7 +836,7 @@ export class Builder {
             associate: config.associate
 
         })).make();
-
+console.error(data)
         const script = await tmpName();
         await writeFile(script, data);
 

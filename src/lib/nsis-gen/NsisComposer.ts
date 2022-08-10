@@ -41,6 +41,13 @@ export interface INsisComposerOptions {
 	// nwFiles: string[];
 }
 
+/***********************************************
+
+ NSIS : https://nsis.sourceforge.io/Docs/
+ https://gist.github.com/SeonHyungJo/18c68d71925f6ccadce6fc75750b7fe0
+
+ ************************************************/
+
 export class NsisComposer {
 
 	protected fixedVersion: string;
@@ -101,7 +108,7 @@ export class NsisComposer {
 
 !define EXE_FILE_DIR 			"$PROGRAMFILES\\\${PRODUCT_COMPANY}\\\${PRODUCT_NAME}"
 !define EXE_FILE_NAME 			"${ this.options.exeName }"
-!define EXE_FILE_FULL_NAME		"\${EXE_FILE_NAME}.exe"
+!define EXE_FILE_FULL_NAME		"${ this.options.exeName }.exe"
 !define PROGRAM_GROUP_NAME		"${ this.options.programGroupName }"			; 프로그램 그룹 이름
 !define	UNINSTALL_NAME			"uninstall.exe"									; 언인스톨러 이름
 
@@ -152,10 +159,23 @@ LangString TXT_SECTION_CREATEDESKTOPICON	\${LANG_KOREAN}		"바탕 화면에 단�
 LangString TXT_SECTION_CREATEQUICKLAUNCH	\${LANG_KOREAN}		"빠른 실행 단축 아이콘 생성"
 LangString TXT_SECTION_CREATSTARTMENU		\${LANG_KOREAN}		"시작 메뉴 단축 아이콘 생성"
 
-LangString TXT_DELETE_ALL_FILES				\${LANG_KOREAN}		"프로그램이 설치된후 생성된 파일등이 설치 폴더($INSTDIR)에 일부 남아 있습니다.$\\r$\\n$\\r$\\n프로그램이 설치 되었던 폴더를 완전히 삭제하시겠습니까?"
 LangString TXT_PROGRAM_GROUP_NAME			\${LANG_KOREAN}		"\${PROGRAM_GROUP_NAME}"
 
-LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		"\${PRODUCT_NAME} 프로그램이 실행중 입니다.$\\r$\\n$\\r$\\n프로그램을 강제 종료하시겠습니까?"
+LangString TXT_DELETE_ALL_FILES				\${LANG_KOREAN}		\\
+"프로그램이 설치된후 생성된 파일등이 설치 폴더($INSTDIR)에 일부 남아 있습니다.\\
+$\\r$\\n$\\r$\\n프로그램이 설치 되었던 폴더를 완전히 삭제하시겠습니까?"
+
+LangString TXT_STILL_RUN_EXIT_PROGRAM		\${LANG_KOREAN}		\\
+"\${PRODUCT_NAME} 프로그램이 실행중 입니다.\\
+$\\r$\\n$\\r$\\n프로그램을 강제 종료하시겠습니까?"
+
+LangString TXT_INSTALL_CANCEL				\${LANG_KOREAN}		\\
+"프로그램 설치를 종료합니다.\\
+$\\r$\\n$\\r$\\n\${PRODUCT_NAME} 프로그램 종료 후 다시 시도 바랍니다."
+
+LangString TXT_UNINSTALL_CANCEL				\${LANG_KOREAN}		\\
+"프로그램 제거를 종료합니다.\\
+$\\r$\\n$\\r$\\n\${PRODUCT_NAME} 프로그램 종료 후 다시 시도 바랍니다."
 
 # Section 이름 : [/o] [([!]|[-])section_name] [section index output]
 ; (!) 설치 구성요소 박스에서 BOLD 표시됨
@@ -182,6 +202,7 @@ ${ await this.prevUninstall() }
 
 ${ await this.installAppLauncher() }
 ${ await this.installChildApp() }
+${ await this.childAppProcess() }
 ${ await this.installResource() }
 
 ;----------------------------------------------------------
@@ -200,6 +221,7 @@ Section !$(TXT_SECTION_COPY)
 
 	; 런처 - app 호출 구조인 경우 sub app을 복사해둠
 	!insertmacro Install_App_Child
+	!insertmacro ChildAppProcess
 	
 	SetDetailsPrint both
 	
@@ -269,6 +291,9 @@ Section Uninstall
 	; uninstall 파일 지우기.
 	Delete "$INSTDIR\\\${UNINSTALL_NAME}"
 
+	; App에서 필요한 uninstall 과정 진행
+	Call un.ChildAppProcess
+	
 	; 설치 파일 제거
 	Call un.Install_App_Launcher
 	Call un.Install_App_Child
@@ -678,15 +703,20 @@ FunctionEnd
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
 !macro Install_App_Child
 
-	StrCmp "\${CHILD_APP_DEST}" "" ok
+	StrCmp "\${CHILD_APP_DEST}" "" skipChildApp
 		StrCpy $9 "\${CHILD_APP_DEST}"
 		RMDir /r $9
-			
-		; nwJS 설치 (installer 파일 그대로 사용)
+
+		; child app 설치 위치 
 		SetOutPath $9
-		File /nonfatal /a /r ${childAppExcludesString} .\\*.*
+		
+		; nwJS 설치 (installer 파일 그대로 사용),
 		;File /r /x "assets" /x "package.json" .\\*.*
-	ok:
+		File /nonfatal /a /r ${childAppExcludesString} /x "uninstall" .\\*.*
+		
+		; uninstall 폴더 따로 처리 (excludes 목록이 /r 처리되기 때문에 파일 유실됨)
+		File /nonfatal /a /r "uninstall"
+	skipChildApp:
 !macroend
 
 Function un.Install_App_Child
@@ -694,10 +724,10 @@ Function un.Install_App_Child
 	RMDir /r "\${CHILD_APP_DEST}"
 	
 	; nw 실행시 생성되는 chrome app 폴더 삭제
-	StrCmp "\${CHROME_APP_CHILD}" "" ok
+	StrCmp "\${CHROME_APP_CHILD}" "" skipChildApp
 		;MessageBox MB_OK "삭제: \${CHROME_APP_CHILD}"
 		RMDir /r "\${CHROME_APP_CHILD}"
-	ok:
+	skipChildApp:
 FunctionEnd
 		`;
 	}
@@ -771,56 +801,87 @@ FunctionEnd
 
 	/*
 	; 기존에 실행중인 프로그램 종료.
-	; download & copy the 'FindProcDLL.dll' in your NSIS plugins directory
-	; (...nsis/Plugins[/platform])
 	; https://nsis.sourceforge.io/FindProcDLL_plug-in
-	; https://ko.osdn.net/projects/sfnet_findkillprocuni/releases/
+	; --> FindProcDLL, KillProcDLL 동작하지 않음 (아래 NsProcess 사용함)
     */
 
+	/*
+	; NsProcess plugin : 기존에 실행중인 프로그램 종료.
+	; https://nsis.sourceforge.io/NsProcess_plugin
+	; Download v1.6: nsProcess.zip (14 KB) 다운 받아
+	; nsProcessW.dll 을 nsProcess.dll 이름 바꿔서 Plugins/...unicord 폴더에 넣어줌
+	*/
 	protected async checkAndCloseApp(): Promise<string> {
+		const exeFileFullName = this.options.exeName + '.exe';
+
+		// const childApp = this.options.childApp;
+		// const childAppPath = (!childApp || !childApp.dest) ? exeFileFullName : childApp.dest + '/' + exeFileFullName;
+		// ;StrCpy $3 "${ win32.normalize(childAppPath) }"
+
 		return `
 ;----------------------------------------------------------
 ; 기존에 실행중인 프로그램 종료.
 ;----------------------------------------------------------
 
+; 기존에 실행중인 프로그램 종료.
 Function CheckAndCloseApp
+	# EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
+	# $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
+	StrCpy $1 "${ exeFileFullName }"
+		
 	loop:
-		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
-		StrCmp $R0 1 processFound done
+		nsProcess::_FindProcess "$1"
+		Pop $R0
+		StrCmp $R0 0 processFound done
 
 	processFound:
 		StrCmp $R8 "first" kill
 
-		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
-		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
+		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO cancel
 		StrCpy $R8 "first"
 		Goto kill
 
 	kill:
-		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
+		nsProcess::_KillProcess "$1"
+      	Pop $R0
+      	Sleep 500
 		Goto loop
 
+	cancel:
+		MessageBox MB_OK "$(TXT_INSTALL_CANCEL)"
+		Quit
+	
 	done:
 FunctionEnd
 
 ; (uninstall) 기존에 실행중인 프로그램 종료.
-Function un.CheckAndCloseApp
+Function un.CheckAndCloseApp		
+	# EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
+	# $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
+	StrCpy $1 "${ exeFileFullName }"
+		
 	loop:
-		FindProcDLL::FindProc "\${EXE_FILE_FULL_NAME}"
-		StrCmp $R0 1 processFound done
+		nsProcess::_FindProcess "$1"
+		Pop $R0
+		StrCmp $R0 0 processFound done
 
 	processFound:
 		StrCmp $R8 "first" kill
 
-		;MessageBox MB_OK "$(TXT_STILL_RUN_EXIT_PROGRAM)"
-		MessageBox MB_ICONINFORMATION|MB_YESNO "삭제할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO done
+		MessageBox MB_ICONINFORMATION|MB_YESNO "설치할 $(TXT_STILL_RUN_EXIT_PROGRAM)" IDNO cancel
 		StrCpy $R8 "first"
 		Goto kill
 
 	kill:
-		KillProcDLL::KillProc "\${EXE_FILE_FULL_NAME}"
+		nsProcess::_KillProcess "$1"
+      	Pop $R0
+      	Sleep 500
 		Goto loop
 
+	cancel:
+		MessageBox MB_OK "$(TXT_UNINSTALL_CANCEL)"
+		Quit
+	
 	done:
 FunctionEnd
 		`;
@@ -830,7 +891,7 @@ FunctionEnd
 	; 파일 실행 확장자 등록
 	; FileAssociation.nsh : 설치 폴더\NSIS\Include 에 집어 넣음
 	; https://nsis.sourceforge.io/File_Association
-	;!include "FileAssociation.nsh"
+	; !include "FileAssociation.nsh"
 	*/
 	protected async fileAssociation(): Promise<string> {
 		const associate = this.options.associate;
@@ -910,4 +971,146 @@ FunctionEnd
 		`;
 	}
 
+	//////////////////////////////////////////////////////////////////
+	// Auth, Logout
+	//////////////////////////////////////////////////////////////////
+
+	/*
+	; exe 실행
+	; download & copy the 'StdUtils.dll' in your NSIS plugins directory
+	; (...nsis/Plugins[/platform])
+	; https://nsis.sourceforge.io/StdUtils_plug-in
+	; http://muldersoft.com/docs/stdutils_readme.html
+	; !include "StdUtils.nsh"
+	; https://github.com/lordmulder/stdutils/blob/master/Examples/StdUtils/ShellExecWait.nsi
+	*/
+	protected async childAppProcess(): Promise<string> {
+		const childApp = this.options.childApp;
+		if(!childApp || !childApp.dest) {
+			return `
+!macro ChildAppProcess
+!macroend
+Function un.ChildAppProcess
+FunctionEnd
+			`;
+		}
+
+		return `
+;----------------------------------------------------------
+; App 호출하여 특정 로직을 실행
+;----------------------------------------------------------
+
+!include "StdUtils.nsh"
+;ShowInstDetails show
+
+!macro ChildAppProcess
+    ;MessageBox MB_OK "\${CHILD_APP_DEST}"
+!macroend
+
+Function un.ChildAppProcess
+	StrCmp "\${CHILD_APP_DEST}" "" skipChildProcess
+
+		# "C:/Users/pdi10/AppData/Local/testApp5"
+		# DetailPrint 'CHROME_APP_LAUNCHER: "\${CHROME_APP_LAUNCHER}"'
+		
+		# "C:/Users/pdi10/AppData/Local/jikji.editor.testapp"
+		# DetailPrint 'CHROME_APP_CHILD: "\${CHROME_APP_CHILD}"'
+		
+		# "C:/Users/pdi10/AppData/Local/jikji.editor.demo.setup/testapp"
+		# DetailPrint 'CHILD_APP_DEST: "\${CHILD_APP_DEST}"'
+		
+		# "testApp3.exe"
+		# DetailPrint 'EXE_FILE_FULL_NAME: "\${EXE_FILE_FULL_NAME}"'
+		
+		Var /GLOBAL childAppPath
+		StrCpy $childAppPath "\${CHILD_APP_DEST}\\\${EXE_FILE_FULL_NAME}"
+		
+		Var /GLOBAL uninstallAppFolder
+		StrCpy $uninstallAppFolder "\${CHILD_APP_DEST}\\uninstall"
+		
+		DetailPrint 'childAppPath: "$childAppPath"'
+		DetailPrint 'uninstallAppFolder: "$uninstallAppFolder"'
+		
+		# child app 호출하여 필요한 uninstall 과정 진행
+		# exe 파일을 실행한다. try to launch the process
+		
+		\${StdUtils.ExecShellWaitEx} $0 $1 "$childAppPath" "open" "$uninstallAppFolder"
+		
+    	# returns "ok", "no_wait" or "error".
+		StrCmp $0 "error" ExecFailed 			;check if process failed to create
+		StrCmp $0 "no_wait" WaitNotPossible 	;check if process can be waited for - always check this!
+		StrCmp $0 "ok" WaitForProc 				;make sure process was created successfully
+		Abort
+		
+    	# 실행 완료 기다리기
+		ExecFailed:
+			DetailPrint "Failed to create process (error code: $1)"
+			Goto WaitDone
+		WaitNotPossible:
+			DetailPrint "Can not wait for process."
+			Goto WaitDone
+		WaitForProc:
+			DetailPrint "Waiting for process. ..."
+			\${StdUtils.WaitForProcEx} $2 $1
+			DetailPrint "Process just terminated (exit code: $2)"
+			Goto WaitDone
+		WaitDone:
+			Goto skipChildProcess
+	skipChildProcess:
+FunctionEnd
+		`;
+	}
+
+	/*
+	; 서버 API 호출
+	; download & copy the 'INetC.dll' in your NSIS plugins directory
+	; (...nsis/Plugins[/platform])
+	; https://nsis.sourceforge.io/Inetc_plug-in
+	; 주의) /HEADER 옵션 : 하나의 변수만 지정할 수 있음
+	*/
+	/*
+	protected async callServer(): Promise<string> {
+		return `
+;----------------------------------------------------------
+; 서버 API 전송
+;----------------------------------------------------------
+
+Function Logout
+	# 데이터를 GET 방식 query 또는 POST 방식 body에 전달해야함
+	
+	;MessageBox MB_OK "로그아웃 테스트"
+	
+	# /HEADER 하나의 변수만 지정할 수 있음
+	# inetc::post "" /NOCANCEL /SILENT /HEADER "licenseKey: 2022-0705-IDCB-0FF7-76A2" "http://localhost:5300/checkLogoutLicense.ax" "$EXEDIR\\post_reply.json" /END
+	
+	# body에 text 파일 내용이 들어감 (licenseKey=&macAddr=)
+	;inetc::post "$EXEDIR\\test.txt" /FILE /NOCANCEL /SILENT "http://localhost:5300/checkLogoutLicense.ax" "$EXEDIR\\post_reply.json" /END
+	# body에 들어갈 내용 직접 입력
+	inetc::post "licenseKey=A&macAddr=B" /NOCANCEL /SILENT "http://localhost:5300/checkLogoutLicense.ax" "$EXEDIR\\post_reply.json" /END
+	
+    Pop $0 # return value = exit code, "OK" if OK
+    MessageBox MB_OK "Download Status: $0"
+    
+    FileOpen $0 $EXEDIR\\post_reply.json r
+    FileRead $0 $1
+    DetailPrint $1
+    FileClose $0
+    ;MessageBox MB_OK "video found"
+    
+    Delete "$EXEDIR\\post_reply.json"
+FunctionEnd
+		`;
+	}
+	*/
+
 }
+
+// NSIS 사용시에 2GB 이상의 대용량 배포의 문제점
+// https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=sbspace&logNo=130163195164
+// NSIS를 이용한 압축 파일 배포(NSIS 7Z PLUGIN)
+// https://www.yuno.org/426
+// Nsis7z plug-in
+// https://nsis.sourceforge.io/Nsis7z_plug-in
+
+
+

@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.15.15",
+    "version": "1.16.0",
     "description": "jik-ji editor installer",
     "main": "./dist/lib/index.js",
     "types": "./dist/lib/index.d.ts",
@@ -10,12 +10,12 @@
     },
     "scripts": {
         "build": "tsc --declaration",
-        "prepublish": "npm run build",
         "//test": "npm run build && ava",
         "//coverage": "nyc ava",
         "//release": "npm test && standard-version",
 
-        "package": "npm run build && npm publish --access=public",
+        "prepublish": "npm run build",
+        "package": "npm publish --access=public",
         "샘플 패키징 실행": "--------------------------------------------------------------",
         "sample": "npm run build && node sample.js --dir=./assets/project",
         "sampleRun": "npm run build && node sample.js --dir=./assets/project --run"

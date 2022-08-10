@@ -23,16 +23,16 @@ export class NsisDiffer extends NsisComposer {
 
         for(const diff of result.diffSet) {
 
-            if(diff.type1 == 'missing' && diff.type2 == 'file') {
+            if(diff.type1 === 'missing' && diff.type2 === 'file') {
                 lines.push(await this.makeWriteFile(diff.path2, '.' + diff.relativePath, diff.name2));
             }
-            else if(diff.type1 == 'file' && diff.type2 == 'missing') {
+            else if(diff.type1 === 'file' && diff.type2 === 'missing') {
                 lines.push(await this.makeRemoveFile(diff.path1, '.' + diff.relativePath, diff.name1));
             }
-            else if(diff.type1 == 'directory' && diff.type2 == 'missing') {
+            else if(diff.type1 === 'directory' && diff.type2 === 'missing') {
                 lines.push(await this.makeRemoveDir(diff.path1, '.' + diff.relativePath, diff.name1));
             }
-            else if(diff.type1 == 'file' && diff.type2 == 'file' && diff.state == 'distinct') {
+            else if(diff.type1 === 'file' && diff.type2 === 'file' && diff.state === 'distinct') {
                 lines.push(await this.makeWriteFile(diff.path2, '.' + diff.relativePath, diff.name2));
             }
 
@@ -47,8 +47,7 @@ export class NsisDiffer extends NsisComposer {
     }
 
     protected async makeWriteFile(rootDir: string, relativeDir: string, filename: string): Promise<string> {
-        return `SetOutPath "$INSTDIR\\${ win32.normalize(relativeDir) }"
-File "${ win32.normalize(resolve(rootDir, filename)) }"`;
+        return `SetOutPath "$INSTDIR\\${ win32.normalize(relativeDir) }"File "${ win32.normalize(resolve(rootDir, filename)) }"`;
     }
 
     protected async makeRemoveDir(rootDir: string, relativeDir: string, filename: string): Promise<string> {

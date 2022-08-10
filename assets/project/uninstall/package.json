@@ -1,0 +1,17 @@
+{
+    "name": "testApp5.uninstall",
+    "version": "0.1.0",
+    "description": "uninstall 과정에서 실행됨",
+    "main": "index.html",
+    "inject_js_start": "uninstall.js",
+    "window": {
+        "frame": false,
+        "width": 300,
+        "height": 300,
+        "resizable": false,
+        "position": "center",
+        "show": false,
+        "transparent": true,
+        "fullscreen": false
+    }
+}
