@@ -81,7 +81,8 @@
             "theme": "theme",
             "license": "assets/LICENSE.txt",
             "web": "https://tovsoft.co.kr/",
-            "diffUpdaters": false
+            "diffUpdaters": false,
+            "scriptFile": true
         }
     },
 

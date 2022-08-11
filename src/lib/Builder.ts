@@ -625,7 +625,7 @@ export class Builder {
             mute: this.options.mute,
         });
 
-        await remove(script);
+        if(config.nsis && !config.nsis.scriptFile) await remove(script);
 
         await versionInfo.addUpdater(toVersion, fromVersion, arch, diffNsis);
 
@@ -768,7 +768,7 @@ export class Builder {
             mute: this.options.mute,
         });
 
-        await remove(script);
+        if(config.nsis && !config.nsis.scriptFile) await remove(script);
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
@@ -836,7 +836,7 @@ export class Builder {
             associate: config.associate
 
         })).make();
-console.error(data)
+
         const script = await tmpName();
         await writeFile(script, data);
 
@@ -844,7 +844,7 @@ console.error(data)
             mute: this.options.mute,
         });
 
-        await remove(script);
+        if(config.nsis && !config.nsis.scriptFile) await remove(script);
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.16.1
+
+* Uninstall 과정에서 호출된 uninstall child app의 chromium 폴더를 제거
+* NSIS 스크립트 파일 놓도록 옵션 처리
+
 ### 1.16.0
 
 * (버그 수정) 실행중인 프로그램 종료.
