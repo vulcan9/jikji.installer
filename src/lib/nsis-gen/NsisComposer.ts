@@ -32,12 +32,15 @@ export interface INsisComposerOptions {
 	output: string;
 
 	// 압축 파일 풀기 기능 지원
-	resource?: any; // {src: string, dest: string};
+	resource?: {src: string, dest: string}[]; // [{src: string, dest: string};]
 	uninstall?: string;
 	associate?: any[];
 	// App 복사 기능 지원
 	childApp?: {
-		name: string, excludes?: string[], dest: string, uninstallApp?: string
+		name: string,
+        excludes?: string[], moves: string[],
+        dest: string,
+        uninstallApp?: string
 	};
 	appName: string;
 	// nwFiles: string[];
@@ -628,11 +631,21 @@ SectionEnd
     */
 
     protected async installAppLauncher(): Promise<string> {
+        let excludes: string[] = [];
 
-        let resourceExcludesString: string = '';
-        if(this.options.resource && this.options.resource.src) {
-            resourceExcludesString = ('/x "' + this.options.resource.src + '"');
+        const childApp = this.options.childApp;
+        if(childApp && childApp.moves) {
+            excludes = excludes.concat(childApp.moves || []);
         }
+
+        if(this.options.resource) {
+            excludes = excludes.concat(this.options.resource.map(p => p.src));
+        }
+
+        // 제외 목록
+        const excludesList = excludes.map(p => `/x "${ win32.normalize(p) }"`).join(' ');
+        // excludesList = ('/x "' + this.options.resource.src + '"');
+
         return `
 ;----------------------------
 ; Launcher App 설치
@@ -646,7 +659,7 @@ SectionEnd
 !macro Install_App_Launcher
     SetOutPath "$INSTDIR"
     ;File /nonfatal /a /r .\\*.*
-    File /nonfatal /a /r ${resourceExcludesString} .\\*.*
+    File /nonfatal /a /r ${ excludesList } .\\*.*
 !macroend
 
 Function un.Install_App_Launcher
@@ -685,9 +698,22 @@ FunctionEnd
             `;
         }
 
+        const excludes = childApp.excludes || [];
+        const moves: string[] = childApp.moves || [];
+        if(moves.indexOf('uninstall') < 0) moves.push('uninstall');
+
         // /x "assets" /x "package.json"
-        const childAppExcludesString = childApp.excludes.map(p => ('/x "' + p + '"')).join(' ');
+        const list: string[] = excludes.concat(moves);
+        const childAppExcludesString = list.map(p => (`/x "${ win32.normalize(p) }"`)).join(' ');
         const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+
+        // childApp 에만 있는 리소스
+        // File /nonfatal /a /r "uninstall"
+        const MOVE_LIST = childApp.moves.map((p) => {
+            return `
+        File /nonfatal /a /r "${ win32.normalize((p)) }"
+            `;
+        }).join('');
 
         return `
 ;----------------------------
@@ -714,10 +740,15 @@ FunctionEnd
         
         ; nwJS 설치 (installer 파일 그대로 사용),
         ;File /r /x "assets" /x "package.json" .\\*.*
-        File /nonfatal /a /r ${childAppExcludesString} /x "uninstall" .\\*.*
+        File /nonfatal /a /r ${childAppExcludesString} .\\*.*
         
         ; uninstall 폴더 따로 처리 (excludes 목록이 /r 처리되기 때문에 파일 유실됨)
-        File /nonfatal /a /r "uninstall"
+        ;File /nonfatal /a /r "uninstall"
+        
+        ; moves 목록 따로 처리
+        ;File /nonfatal /a /r "uninstall"
+        ${ MOVE_LIST }
+        
     skipChildApp:
 !macroend
 
@@ -748,12 +779,57 @@ Function un.Install_Resource
 FunctionEnd
         `;
 
-        const resource: any = this.options.resource;
+        const resource: {src: string, dest: string}[] = this.options.resource;
         const otherUninstall = this.options.uninstall ? win32.normalize(this.options.uninstall) : '';
         if(!resource && !otherUninstall) return empty;
 
-        const resourceSrc = resource.src ? win32.normalize(resource.src) : '';
-        const resourceDest = resource.dest ? win32.normalize(resource.dest) : '';
+        // const resourceSrc = resource.src ? win32.normalize(resource.src) : '';
+        // const resourceDest = resource.dest ? win32.normalize(resource.dest) : '';
+
+        /*
+        !define RESOURCE_SRC                 "${ resourceSrc }"
+        !define RESOURCE_DEST                "${ resourceDest }"
+
+        !macro Install_Resource
+            StrCmp   "\${RESOURCE_DEST}" "" ok
+            RMDir /r "\${RESOURCE_DEST}"
+            StrCmp "\${RESOURCE_SRC}" "" ok
+                SetOutPath                "\${RESOURCE_DEST}"
+                File /nonfatal /a /r      "\${RESOURCE_SRC}\\*"
+                ;File /nonfatal /a /r      assets\\*
+            ok:
+        !macroend
+        */
+        const ADD_LIST = resource.map((obj) => {
+            if(!obj.src || !obj.dest) return '';
+            const src = win32.normalize(obj.src);
+            const dest = win32.normalize(obj.dest);
+            return `
+    RMDir /r                  "${ dest }"
+    SetOutPath                "${ dest }"
+    File /nonfatal /a /r      "${ src }"
+                `;
+        }).join('\n\n');
+
+        /*
+        ; 버전별 리소스 폴더 삭제
+        Function un.Install_Resource
+            StrCmp "${RESOURCE_DEST}" "" skipDest
+                Delete         "${RESOURCE_DEST}\*.*"
+                RMDir /r       "${RESOURCE_DEST}"
+
+                ...
+        FunctionEnd
+        */
+        const REMOVE_LIST = resource.map((obj) => {
+            if(!obj.src || !obj.dest) return '';
+            // const src = win32.normalize(obj.src);
+            const dest = win32.normalize(obj.dest);
+            return `
+    Delete         "${dest}\\*.*"
+    RMDir /r       "${dest}"
+            `;
+        });
 
         return `
 ;----------------------------
@@ -761,27 +837,16 @@ FunctionEnd
 ;----------------------------
 
 # 압축 파일 extract 정보 
-!define RESOURCE_SRC                 "${ resourceSrc }"
-!define RESOURCE_DEST                "${ resourceDest }"
 !define OTHER_UNINSTALL_DEST         "${ otherUninstall }"
 
 !macro Install_Resource
-    StrCmp   "\${RESOURCE_DEST}" "" ok
-    RMDir /r "\${RESOURCE_DEST}"
-    
-    StrCmp "\${RESOURCE_SRC}" "" ok
-        SetOutPath                "\${RESOURCE_DEST}"
-        File /nonfatal /a /r      "\${RESOURCE_SRC}\\*"
-        ;File /nonfatal /a /r      assets\\*
-    ok:
+    ${ ADD_LIST }
 !macroend
 
 ; 버전별 리소스 폴더 삭제
 Function un.Install_Resource
-    StrCmp "\${RESOURCE_DEST}" "" skipDest
-        Delete         "\${RESOURCE_DEST}\\*.*"
-        RMDir /r       "\${RESOURCE_DEST}"
-        
+    ${ REMOVE_LIST }
+    
     skipDest:
         ; 추가로 지정한 폴더 지우기
         StrCmp "\${OTHER_UNINSTALL_DEST}" "" ok

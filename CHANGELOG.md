@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.16.2
+
+* childApp moves 설정 추가함
+* resource 설정을 배열로 바꿈
+
 ### 1.16.1
 
 * Uninstall 과정에서 호출된 uninstall child app의 chromium 폴더를 제거

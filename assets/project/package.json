@@ -30,11 +30,11 @@
         ],
         "excludes": [],
 
-        "//resource": "(생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때",
-        "resource": {
+        "//resource": "(생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때. 패키징 폴더에는 제외됨",
+        "resource": [{
             "src": "한글 폴더",
             "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/firstrun/한글 폴더"
-        },
+        }],
 
         "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때",
         "uninstall": "$LOCALAPPDATA/jikji.editor.demo.setup/test",
@@ -42,11 +42,17 @@
         "//childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)",
         "childApp": {
             "name": "jikji.editor.testapp",
+            "//excludes": "(생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록",
             "excludes": [
                 "package.json",
                 "test.bin",
                 "README.md",
-                "index.html"
+                "index.html",
+                "한글 폴더"
+            ],
+            "//moves": "(생략 가능) childApp으로 복사 후 패키징 폴더에서 삭제할 목록",
+            "moves": [
+                "uninstall", "theme", "engFolder", "assets"
             ],
             "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/testapp",
             "uninstallApp": "$LOCALAPPDATA/testApp5.uninstall"
