@@ -11,3 +11,15 @@ setTimeout(function(){
     alert('unstall.js 호출됨');
     process.exit(1);
 }, 0);
+
+
+var process = window.process;
+var nw = window.nw;
+var APP = nw.App;
+var WIN = nw.Window.get();
+var argv = APP.argv;
+
+console.log('argv: ', argv);
+alert('argv: ' + argv);
+
+// WIN.showDevTools();

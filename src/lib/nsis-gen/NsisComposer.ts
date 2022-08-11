@@ -807,7 +807,7 @@ FunctionEnd
             return `
     RMDir /r                  "${ dest }"
     SetOutPath                "${ dest }"
-    File /nonfatal /a /r      "${ src }"
+    File /nonfatal /a /r      "${ src }\\*"
                 `;
         }).join('\n\n');
 
