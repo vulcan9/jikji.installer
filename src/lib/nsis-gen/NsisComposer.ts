@@ -36,7 +36,9 @@ export interface INsisComposerOptions {
 	uninstall?: string;
 	associate?: any[];
 	// App 복사 기능 지원
-	childApp?: {name: string, excludes?: string[], dest: string};
+	childApp?: {
+		name: string, excludes?: string[], dest: string, uninstallApp?: string
+	};
 	appName: string;
 	// nwFiles: string[];
 }
@@ -995,6 +997,9 @@ FunctionEnd
 			`;
 		}
 
+		// Uninstall App  : childApp의 uninstall 폴더의 package.json 파일 name
+		const chromiumUninstallApp = childApp.uninstallApp || '';
+
 		return `
 ;----------------------------------------------------------
 ; App 호출하여 특정 로직을 실행
@@ -1022,6 +1027,9 @@ Function un.ChildAppProcess
 		# "testApp3.exe"
 		# DetailPrint 'EXE_FILE_FULL_NAME: "\${EXE_FILE_FULL_NAME}"'
 		
+		Var /GLOBAL chromiumUninstallApp
+		StrCpy $chromiumUninstallApp "${ win32.normalize(chromiumUninstallApp) }"
+		
 		Var /GLOBAL childAppPath
 		StrCpy $childAppPath "\${CHILD_APP_DEST}\\\${EXE_FILE_FULL_NAME}"
 		
@@ -1046,16 +1054,26 @@ Function un.ChildAppProcess
 		ExecFailed:
 			DetailPrint "Failed to create process (error code: $1)"
 			Goto WaitDone
+			
 		WaitNotPossible:
 			DetailPrint "Can not wait for process."
 			Goto WaitDone
+			
 		WaitForProc:
 			DetailPrint "Waiting for process. ..."
 			\${StdUtils.WaitForProcEx} $2 $1
 			DetailPrint "Process just terminated (exit code: $2)"
 			Goto WaitDone
+			
 		WaitDone:
-			Goto skipChildProcess
+			StrCmp $chromiumUninstallApp "" skipChildProcess
+				Sleep 500
+				;MessageBox MB_OK "삭제 : $chromiumUninstallApp"
+				
+				; chromium Uninstall App 폴더 삭제
+				RMDir /r $chromiumUninstallApp
+				Goto skipChildProcess
+			
 	skipChildProcess:
 FunctionEnd
 		`;

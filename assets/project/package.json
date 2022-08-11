@@ -48,8 +48,10 @@
                 "README.md",
                 "index.html"
             ],
-            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/testapp"
+            "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/testapp",
+            "uninstallApp": "$LOCALAPPDATA/testApp5.uninstall"
         },
+        "//childApp.uninstall": "childApp의 uninstall 폴더의 package.json 파일 name. 이 값이 있어야 uninstall App이 호출됨",
 
         "associate": [{
             "description": "JIK-JI Editor Project File",
