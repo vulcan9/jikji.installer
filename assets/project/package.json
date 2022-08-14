@@ -48,6 +48,7 @@
                 "test.bin",
                 "README.md",
                 "index.html",
+                "uninstall.exe",
                 "한글 폴더"
             ],
             "//moves": "(생략 가능) childApp으로 복사 후 패키징 폴더에서 삭제할 목록",

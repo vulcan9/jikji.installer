@@ -121,8 +121,14 @@ export class NsisComposer {
 ; 레지스트리 키 지정
 ;----------------------------------------------------------
 
+#admin
 !define REG_ROOT_KEY              "HKLM"
 !define REG_UNROOT_KEY            "HKLM"
+
+#user
+#!define REG_ROOT_KEY              "HKCU"
+#!define REG_UNROOT_KEY            "HKCU"
+
 !define REG_APPDIR_KEY            "Software\\Microsoft\\Windows\\CurrentVersion\\App Path\\\${EXE_FILE_FULL_NAME}"
 !define REG_UNINST_KEY            "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\${PRODUCT_NAME}"
 
@@ -206,9 +212,9 @@ ${ await this.prevUninstall() }
 ;----------------------------------------------------------
 
 ${ await this.installAppLauncher() }
+${ await this.installResource() }
 ${ await this.installChildApp() }
 ${ await this.childAppProcess() }
-${ await this.installResource() }
 
 ;----------------------------------------------------------
 # 설치 : 기본 파일 복사
@@ -296,7 +302,7 @@ Section Uninstall
     ; uninstall 파일 지우기.
     Delete "$INSTDIR\\\${UNINSTALL_NAME}"
 
-    ; App에서 필요한 uninstall 과정 진행
+    ; Child App에서 필요한 uninstall 과정 진행
     Call un.ChildAppProcess
     
     ; 설치 파일 제거
@@ -306,13 +312,13 @@ Section Uninstall
 
     SetDetailsPrint both
     
-    ${ await this.deleteProgramGroup() }
-    ${ await this.deleteIcons() }
-
     ;-------------
     ; 등록 정보 지우기
     DeleteRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}"
     DeleteRegKey \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}"
+
+    ${ await this.deleteIcons() }
+    ${ await this.deleteProgramGroup() }
 
     Call un.FileAssociate
 SectionEnd
@@ -375,8 +381,9 @@ InstallDirRegKey            \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}" "Install_Dir"
 ;----------------------------------------------------------
 ; Request application privileges for Windows Vista
 ;----------------------------------------------------------
-RequestExecutionLevel admin
 
+RequestExecutionLevel admin
+# RequestExecutionLevel user
         `;
     }
 
@@ -537,17 +544,17 @@ Section $(TXT_SECTION_CREATSTARTMENU)
     ; 위치 : C:/ProgramData/Microsoft/Windows/Start Menu/Programs/
 
     SetShellVarContext    \${SHELL_VAR_CONTEXT_PROGG}
-    SetOutPath            "$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\"
-    SetOutPath            "$INSTDIR"
-    CreateShortCut        "$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"            "$INSTDIR\\\${EXE_FILE_FULL_NAME}"     "" "" 0
-    CreateShortCut        "$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"       "$INSTDIR\\\${UNINSTALL_NAME}"         "" "" 0
+    ;SetOutPath            "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\"
+    ;SetOutPath            "$INSTDIR"
+    CreateShortCut        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"            "$INSTDIR\\\${EXE_FILE_FULL_NAME}"     "" "" 0
+    CreateShortCut        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"       "$INSTDIR\\\${UNINSTALL_NAME}"         "" "" 0
 
     ; 시작 메뉴 단축 아이콘 - $STARTMENU
     ; 위치 : C:\\Users\\pdi10\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu
 
     SetShellVarContext    \${SHELL_VAR_CONTEXT_ICON}
-    SetOutPath            "$STARTMENU\\Programs\\$(TXT_PROGRAM_GROUP_NAME)\\"
-    SetOutPath            "$INSTDIR"
+    ;SetOutPath            "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\"
+    ;SetOutPath            "$INSTDIR"
     CreateShortCut        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"         "$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
     CreateShortCut        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"    "$INSTDIR\\\${UNINSTALL_NAME}"     "" "" 0
 SectionEnd
@@ -585,35 +592,42 @@ SectionEnd
         `;
     }
 
-    protected async deleteProgramGroup(): Promise<string> {
-        return `
-    ;-------------
-    ; 프로그램 그룹 지우기
-    SetShellVarContext    \${SHELL_VAR_CONTEXT_PROGG}                                ; 설치할때 프로그램 그룹이 설치된 위치.
-    RMDir /r              "$SMPROGRAMS\\$(TXT_PROGRAM_GROUP_NAME)"                   ; 프로그램 그룹 지우기
-
-    SetShellVarContext    \${SHELL_VAR_CONTEXT_ICON}
-    RMDir /r              "$STARTMENU\\Programs\\$(TXT_PROGRAM_GROUP_NAME)\\"        ; 시작 메뉴 아이콘 그룹 지우기
-
-        `;
-    }
-
     protected async deleteIcons(): Promise<string> {
         return `
     ;-------------
     ; 단축 아이콘 지우기
-    SetShellVarContext current                                    ; current 시작 단축 아이콘 지우기
+    SetShellVarContext \${SHELL_VAR_CONTEXT_ICON}                          ; current 시작 단축 아이콘 지우기
         Delete    "$DESKTOP\\\${EXE_FILE_NAME}.lnk"                        ; 바탕화면 단축 아이콘
         Delete    "$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk"                    ; 빠른 실행
-        ;Delete   "$STARTMENU\\Programs\\(EXE_FILE_NAME).lnk"              ; 시작 메뉴
+        ;Delete   "$STARTMENU\\Programs\\\$(EXE_FILE_NAME).lnk"              ; 시작 메뉴
         ;Delete   "$SMSTARTUP\\\${EXE_FILE_NAME}.lnk"
         
-    SetShellVarContext all                                        ; all 시작 단축 아이콘 지우기
+    SetShellVarContext \${SHELL_VAR_CONTEXT_PROGG}                         ; all 시작 단축 아이콘 지우기
         Delete    "$DESKTOP\\\${EXE_FILE_NAME}.lnk"                        ; 바탕화면 단축 아이콘
         Delete    "$QUICKLAUNCH\\\${EXE_FILE_NAME}.lnk"                    ; 빠른 실행
         ;Delete   "$STARTMENU\\Programs\\\${EXE_FILE_NAME}.lnk"            ; 시작 메뉴
         ;Delete   "$SMSTARTUP\\\${EXE_FILE_NAME}.lnk"
         
+        `;
+    }
+
+    protected async deleteProgramGroup(): Promise<string> {
+        return `
+    ;-------------
+    ; 링크 지우기 & 프로그램 그룹 지우기 (빈 폴더 일때만 삭제함)
+    # RmDir : 빈 폴더 일때만 삭제
+    # RmDir /r : 폴더 안의 내용과 폴더 모두 삭제
+    
+    SetShellVarContext    \${SHELL_VAR_CONTEXT_PROGG}                                ; 설치할때 프로그램 그룹이 설치된 위치.
+    Delete        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"
+    Delete        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"
+    RMDir         "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)"                           ; 프로그램 그룹 지우기
+
+    SetShellVarContext    \${SHELL_VAR_CONTEXT_ICON}
+    Delete        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"
+    Delete        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"
+    RMDir         "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)"                  ; 시작 메뉴 아이콘 그룹 지우기
+
         `;
     }
 
@@ -633,10 +647,10 @@ SectionEnd
     protected async installAppLauncher(): Promise<string> {
         let excludes: string[] = [];
 
-        const childApp = this.options.childApp;
-        if(childApp && childApp.moves) {
-            excludes = excludes.concat(childApp.moves || []);
-        }
+        // const childApp = this.options.childApp;
+        // if(childApp && childApp.moves) {
+        //     excludes = excludes.concat(childApp.moves || []);
+        // }
 
         if(this.options.resource) {
             excludes = excludes.concat(this.options.resource.map(p => p.src));
@@ -698,22 +712,51 @@ FunctionEnd
             `;
         }
 
+        const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+        const chromeAppDest = childApp.dest ? win32.normalize(childApp.dest) : '';
+
         const excludes = childApp.excludes || [];
         const moves: string[] = childApp.moves || [];
-        if(moves.indexOf('uninstall') < 0) moves.push('uninstall');
 
         // /x "assets" /x "package.json"
-        const list: string[] = excludes.concat(moves);
-        const childAppExcludesString = list.map(p => (`/x "${ win32.normalize(p) }"`)).join(' ');
-        const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+        // const list: string[] = excludes.concat(moves);
+        // const childAppExcludesString = list.map(p => (`/x "${ win32.normalize(p) }"`)).join(' ');
 
         // childApp 에만 있는 리소스
         // File /nonfatal /a /r "uninstall"
-        const MOVE_LIST = childApp.moves.map((p) => {
-            return `
-        File /nonfatal /a /r "${ win32.normalize((p)) }"
+        const MOVE_LIST = (() => {
+            return childApp.moves.map((p) => {
+                const src = win32.normalize((p));
+                const dest = win32.normalize((childApp.dest + '/' + p));
+                return `
+        ;MessageBox MB_OK "moves 목록: $INSTDIR\\${ src }"
+        ;File /nonfatal /a /r "${ src }"
+        ;CopyFiles /SILENT "$INSTDIR\\${ src }\\*.*" "${ dest }"
+        Rename "$INSTDIR\\${ src }" "${ dest }"
             `;
-        }).join('');
+            }).join('');
+        })();
+
+        const EXCLUDE_LIST = (() => {
+            const list: string[] = excludes.concat(moves);
+            return list.map(p => {
+                // 폴더는 '\*.*' 붙여줌
+                // const path = (p.includes('.')) ? p : `${p}/*.*`;
+                return `/x "${ win32.normalize(p) }"`;
+            }).join(' ');
+        })();
+
+        // 사용안함
+        const DELETE_LIST = (() => {
+            return excludes.map(p => {
+                const path = win32.normalize(chromeAppDest + '/' + p);
+                return (p.includes('.') ? 'Delete' : 'RMDir') + ` "${ path }"\n`;
+            }).join(' ');
+        })();
+
+        console.error('# 리소스 이동: \n', MOVE_LIST);
+        console.error('# nwJS 설치: \n', EXCLUDE_LIST);
+        // console.error('# 삭제: \n', DELETE_LIST);
 
         return `
 ;----------------------------
@@ -723,7 +766,7 @@ FunctionEnd
 !define CHROME_APP_CHILD            "${ chromeAppName }"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define CHILD_APP_DEST              "${ childApp.dest ? win32.normalize(childApp.dest) : ''}"
+!define CHILD_APP_DEST              "${ chromeAppDest }"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -738,16 +781,37 @@ FunctionEnd
         ; child app 설치 위치 
         SetOutPath $9
         
-        ; nwJS 설치 (installer 파일 그대로 사용),
-        ;File /r /x "assets" /x "package.json" .\\*.*
-        File /nonfatal /a /r ${childAppExcludesString} .\\*.*
-        
-        ; uninstall 폴더 따로 처리 (excludes 목록이 /r 처리되기 때문에 파일 유실됨)
-        ;File /nonfatal /a /r "uninstall"
-        
-        ; moves 목록 따로 처리
-        ;File /nonfatal /a /r "uninstall"
+        # moves 목록 따로 처리
+        # File /nonfatal /a /r "uninstall"
         ${ MOVE_LIST }
+        
+        # child uninstall App 프로세스가 완전히 종료되지 않아 파일을 사용중이라 
+        # 삭제 및 덮어쓰기가 불가한 상태였음 - 에러 발생함
+        # exit 코드가 주석처리 되어 있었음 ㅠㅠ
+        # MessageBox MB_OK "# 이곳에서 문제 발생"
+
+        #-------------------
+        # nwJS 설치 (installer 파일 그대로 사용)
+        #-------------------
+        
+        # 방법 1: 
+        # /r 옵션이 있을때는 폴더명 뒤에 \\*.* 을 붙여줘야 하위 경로까지 패턴 매칭되지 않음
+        # File /nonfatal /a /r [/x 경로 패턴] .\\*.*
+        File /nonfatal /a ${EXCLUDE_LIST} .\\*.*
+        
+        # chrome app 리소스 따로 복사해 줘야함
+        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${ chromeAppDest }"
+        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${ chromeAppDest }\\locales"
+        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${ chromeAppDest }\\swiftshader"
+        
+        /*
+        # 방법 2: nwJS 설치 (installer 파일 그대로 사용)
+        # resource로 정의된 리스트는 $INSTDIR 폴더에서 제외됨
+        # moves 목록은 이미 실행됬으므로 전체 폴더를 카피해도 됨 (chrome app만 남아있음)
+        CopyFiles /SILENT "$INSTDIR\\*.*" "${ chromeAppDest }"
+        # 제외 목록 삭제
+        ${ DELETE_LIST }
+        */
         
     skipChildApp:
 !macroend
@@ -1135,7 +1199,6 @@ Function un.ChildAppProcess
             
         WaitDone:
             ;MessageBox MB_OK "삭제 : $chromiumUninstallApp"
-            Sleep 500
             
             ; chromium Uninstall App 폴더 삭제
             RMDir /r $chromiumUninstallApp

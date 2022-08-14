@@ -16,23 +16,86 @@
 
 GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOD
 
-<!--
-<button onclick="exit(0);">exit code 0</button>
-<button onclick="exit(1);">exit code 1</button>
+
+<button onclick="setup();">set up</button>
 <script>
     // var nw = window.nw;
     // var WIN = nw.Window.get();
     // 프로세스 종료(창이 닫힐때)까지 시간이 좀 걸리므로 미리 감춘다.
     // WIN.hide();
 
-    // 종료 코드: https://wiki.kldp.org/HOWTO/html/Adv-Bash-Scr-HOWTO/exitcodes.html
-function exit(code){
-    // WIN.close(true);
-    // nw.App.quit(code);
-    process.exit(code);
-}
+    function setup(){
+        var hasError = false;
+
+        var nw = window.nw;
+        var WIN = nw.Window.get();
+
+        process.on('uncaughtException', onException);
+        function onException(err){
+            hasError = true;
+            if(WIN) WIN.show();
+
+            // var msg = '# Uncaught Exception 오류가 발생 했습니다.\n' +
+            //     '[Caught Exception] : ' + err + '\n\n' + err.stack;
+            console.error('[업데이트] # [Caught Exception] : ' + err);
+        }
+
+        /*
+
+        // setup exe를 실행한다. (install할때 프로그램 강제종료 alert 창 뜸)
+        execute();
+        callback(null, {
+            pathString: 'installer가 실행됨'
+        });
+
+        /*/
+
+        try{
+            // setup exe를 실행한다.
+            execute();
+        }catch(err){
+            hasError = true;
+            onException(err);
+        }finally {
+
+            // setTimeout(function(){
+                if(hasError) return;
+                WIN.hide();
+                // win.close();
+            // }, 1000);
+
+            // 설치 프로그램이 동작할 충분한 시간을 준다.
+            // setTimeout(function(){
+                process.off('uncaughtException', onException);
+                if(hasError) return;
+
+                // 프로그램을 종료한다.
+                // process 살아있으면 install할때 프로그램 강제종료 alert 창 뜸
+                // install exe 실행 취소할 수도 있으므로 여기에서도 종료해줌
+                WIN.close(true);
+                nw.App.quit();
+
+            // }, 10000);
+        }
+
+        //*/
+
+        function execute(){
+            // console.error('execute : ', nw===this.nw, window.nw === this.nw, window.nw, this.nw);
+
+            var setupFile = "D:\\Jik-ji Project\\jikji.installer\\dist_sample\\testApp5-0.1.11 (win x86).exe";
+            var command = '"' + setupFile + '"';
+            alert('실행: ' + setupFile);
+
+            var opt = {detached: true, shell: true};
+
+            const childProcess = require('child_process');
+            var child = childProcess.spawn(command, [], opt);
+            child.unref();
+        }
+    }
+
 </script>
--->
 
 </body>
 </html>

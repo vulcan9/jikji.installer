@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.17.5
+
+* 프로그램 그룹 폴더 빈 폴더 일때만 폴더 삭제되도록 수정
+* child App 복사(install) 로직 수정
+
 ### 1.16.2
 
 * childApp moves 설정 추가함
-* resource 설정을 배열로 바꿈
+* resource 설정을 배열로 바꿈 
 
 ### 1.16.1
 
