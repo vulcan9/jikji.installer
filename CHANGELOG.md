@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.17.6
+
+* 인스톨 과정에서 호출되는 uninstall.exe에 매개변수 전달
+  - 인스톨 과정에서 child app uninstall 과정 호출하지 않음
+  - 단독 uninstall.exe 실행시에만 child app uninstall 과정 호출함
+
 ### 1.17.5
 
 * 프로그램 그룹 폴더 빈 폴더 일때만 폴더 삭제되도록 수정

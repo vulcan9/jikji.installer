@@ -507,8 +507,14 @@ Section $(TXT_SECTION_UNINSTALL)
     DetailPrint $(TXT_VERSION_UNINSTALL)
     SetDetailsPrint listonly                          ; none|listonly|textonly|both|lastused
     
-    ; 실행 종료시까지 기다림 (/S: silent)
-    ExecWait "$6 /S _?=$INSTDIR"                      ;Do not copy the uninstaller to a temp file
+    #############################################
+    # 인스톨러에서 uninstall.exe 호출할때 /from=installer 매개변수 전달함
+    # (uninstall 단독 실행시에만 로그아웃하기 위함)
+    # 여기에서 호출되는 uninstall.exe 에는 파라메터를 넘겨준다
+    #############################################
+    
+    # 실행 종료시까지 기다림 (/S: silent)
+    ExecWait "$6 /from=installer /S _?=$INSTDIR"                      ;Do not copy the uninstaller to a temp file
 
     /*
     IfErrors no_remove_uninstaller done
@@ -544,8 +550,8 @@ Section $(TXT_SECTION_CREATSTARTMENU)
     ; 위치 : C:/ProgramData/Microsoft/Windows/Start Menu/Programs/
 
     SetShellVarContext    \${SHELL_VAR_CONTEXT_PROGG}
-    ;SetOutPath            "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\"
-    ;SetOutPath            "$INSTDIR"
+    SetOutPath            "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\"
+    SetOutPath            "$INSTDIR"
     CreateShortCut        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"            "$INSTDIR\\\${EXE_FILE_FULL_NAME}"     "" "" 0
     CreateShortCut        "$SMPROGRAMS\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"       "$INSTDIR\\\${UNINSTALL_NAME}"         "" "" 0
 
@@ -553,8 +559,8 @@ Section $(TXT_SECTION_CREATSTARTMENU)
     ; 위치 : C:\\Users\\pdi10\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu
 
     SetShellVarContext    \${SHELL_VAR_CONTEXT_ICON}
-    ;SetOutPath            "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\"
-    ;SetOutPath            "$INSTDIR"
+    SetOutPath            "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\"
+    SetOutPath            "$INSTDIR"
     CreateShortCut        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME}.lnk"         "$INSTDIR\\\${EXE_FILE_FULL_NAME}" "" "" 0
     CreateShortCut        "$STARTMENU\\Programs\\\$(TXT_PROGRAM_GROUP_NAME)\\\${EXE_FILE_NAME} 제거.lnk"    "$INSTDIR\\\${UNINSTALL_NAME}"     "" "" 0
 SectionEnd
@@ -1143,6 +1149,22 @@ FunctionEnd
 
 Function un.ChildAppProcess
 
+    # 런처로 들어온 모든 파라미터를 얻는다
+    # \${StdUtils.GetAllParameters} $R0 0
+    # MessageBox MB_OK "$R0"
+
+    # /from=installer
+    # \${StdUtils.GetParameter} user_var(output) name default
+    \${StdUtils.GetParameter} $R0 "from" ""
+    ;MessageBox MB_OK "언인스톨 호출: $R0"
+    
+    # 인스톨러에서 호출된 uninstall.exe이면 child process 실행하지 않는다
+    StrCmp $R0 "installer" skipChildProcess
+
+    ####################################
+    # uninstall.exe 단독으로 실행된 경우
+    ####################################
+
     Var /GLOBAL chromiumUninstallApp
     StrCpy $chromiumUninstallApp "${ win32.normalize(chromiumUninstallApp) }"
         
@@ -1152,13 +1174,10 @@ Function un.ChildAppProcess
 
         # "C:/Users/pdi10/AppData/Local/testApp5"
         # DetailPrint 'CHROME_APP_LAUNCHER: "\${CHROME_APP_LAUNCHER}"'
-        
         # "C:/Users/pdi10/AppData/Local/jikji.editor.testapp"
         # DetailPrint 'CHROME_APP_CHILD: "\${CHROME_APP_CHILD}"'
-        
         # "C:/Users/pdi10/AppData/Local/jikji.editor.demo.setup/testapp"
         # DetailPrint 'CHILD_APP_DEST: "\${CHILD_APP_DEST}"'
-        
         # "testApp3.exe"
         # DetailPrint 'EXE_FILE_FULL_NAME: "\${EXE_FILE_FULL_NAME}"'
         
@@ -1171,8 +1190,10 @@ Function un.ChildAppProcess
         DetailPrint 'childAppPath: "$childAppPath"'
         DetailPrint 'uninstallAppFolder: "$uninstallAppFolder"'
         
+        #############################################
         # child app 호출하여 필요한 uninstall 과정 진행
         # exe 파일을 실행한다. try to launch the process
+        #############################################
         
         \${StdUtils.ExecShellWaitEx} $0 $1 "$childAppPath" "open" "$uninstallAppFolder"
         

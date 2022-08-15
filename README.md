@@ -130,6 +130,18 @@ MIT.
 빌드 결과: dist_sample
 ```
 
+# 디버깅
+
+* `package.json` 파일 옵션 설정
+```
+  "nsis": {
+      // 생성된 nsi 파일을 삭제하지 않음
+      "scriptFile": true
+  }
+```
+* 콘솔창에서 nsi 파일 경로(temp 폴더)를 확인한 뒤  
+* `assets/scriptFileDebug.nsi` 에 복사
+* `HM NIS Edit` 프로그램에서 nsi 파일을 열고 컴파일 및 디버깅
 
 
 
