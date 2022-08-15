@@ -57,11 +57,10 @@
             ],
             "dest": "$LOCALAPPDATA/jikji.editor.demo.setup/testapp",
 
-            "//uninstall app": "uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다",
+            "//uninstall app": "uninstall 폴더의 package.json 파일 name (uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다)",
             "//uninstall app 호출": "install.exe에서 호출되는 uninstall과정에서는 호출 안됨 (uninstall.exe 단독 실행시에만 호출됨)",
             "uninstallApp": "$LOCALAPPDATA/testApp5.uninstall"
         },
-        "//childApp.uninstall": "childApp의 uninstall 폴더의 package.json 파일 name. 이 값이 있어야 uninstall App이 호출됨",
 
         "associate": [{
             "description": "JIK-JI Editor Project File",
