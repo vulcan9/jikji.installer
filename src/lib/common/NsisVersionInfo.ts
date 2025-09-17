@@ -1,9 +1,7 @@
-
 import { basename, dirname, relative } from 'path';
 import { createHash } from 'crypto';
-
-import { exists, readJson, writeJson, createReadStream } from 'fs-extra';
-import * as semver from 'semver';
+import fs from 'fs-extra';
+import semver from 'semver';
 
 export interface IInstaller {
     arch: string;
@@ -35,8 +33,9 @@ export interface IVersionInfoData {
 
 export class NsisVersionInfo {
 
-    protected outputDir: string;
-    protected data: IVersionInfoData;
+    protected outputDir: string = '';
+
+    protected data!: IVersionInfoData;
 
     constructor(protected path: string) {
 
@@ -48,7 +47,7 @@ export class NsisVersionInfo {
 
         const data = await this.getData();
 
-        if(!data.versions.find(item => item.version == version)) {
+        if (!data.versions.find(item => item.version === version)) {
 
             data.versions.push({
                 version,
@@ -76,9 +75,9 @@ export class NsisVersionInfo {
 
         const data = await this.getData();
 
-        const item = data.versions.find(item => item.version == version);
+        const item = data.versions.find(item => item.version === version);
 
-        if(!item) {
+        if (!item) {
             throw new Error('ERROR_VERSION_NOT_FOUND');
         }
 
@@ -90,13 +89,12 @@ export class NsisVersionInfo {
 
         const data = await this.getData();
 
-        const versionItem: IVersion = data.versions.find(item => item.version == version);
-
-        if(!versionItem) {
+        const versionItem: IVersion | undefined = data.versions.find(item => item.version === version);
+        if (!versionItem) {
             throw new Error('ERROR_VERSION_NOT_FOUND');
         }
 
-        if(!versionItem.installers.find(item => item.arch == arch)) {
+        if (!versionItem.installers.find(item => item.arch === arch)) {
 
             versionItem.installers.push({
                 arch,
@@ -113,13 +111,12 @@ export class NsisVersionInfo {
 
         const data = await this.getData();
 
-        const versionItem: IVersion = data.versions.find(item => item.version == version);
-
-        if(!versionItem) {
+        const versionItem: IVersion | undefined = data.versions.find(item => item.version === version);
+        if (!versionItem) {
             throw new Error('ERROR_VERSION_NOT_FOUND');
         }
 
-        if(!versionItem.updaters.find(item => item.fromVersion == fromVersion && item.arch == arch)) {
+        if (!versionItem.updaters.find(item => item.fromVersion === fromVersion && item.arch === arch)) {
 
             versionItem.updaters.push({
                 fromVersion,
@@ -134,31 +131,30 @@ export class NsisVersionInfo {
     }
 
     public async save() {
-        await writeJson(this.path, this.data);
+        await fs.writeJson(this.path, this.data);
     }
 
     protected async getData() {
 
-        if(!this.data) {
-            this.data = (await new Promise((resolve, reject) => exists(this.path, resolve)))
-            ? await readJson(this.path)
-            : {
-                latest: undefined,
-                versions: [],
-            };
+        if (!this.data) {
+            this.data = (await fs.pathExists(this.path))
+                ? await fs.readJson(this.path)
+                : {
+                    latest: undefined,
+                    versions: [],
+                };
         }
 
         return this.data;
-
     }
 
     protected updateLatestVersion() {
 
-        if(this.data.versions.length == 0) {
+        if (this.data.versions.length === 0) {
             return;
         }
 
-        const versions = [ ...this.data.versions ];
+        const versions = [...this.data.versions];
         versions.sort((a, b) => semver.gt(a.version, b.version) ? -1 : 1);
 
         this.data.latest = versions[0].version;
@@ -175,14 +171,14 @@ export class NsisVersionInfo {
 
                 const data = hasher.read();
 
-                if(data) {
+                if (data) {
                     hasher.end();
                     resolve((<any>data).toString('hex'));
                 }
 
             });
 
-            createReadStream(path).pipe(hasher);
+            fs.createReadStream(path).pipe(hasher);
 
         });
     }

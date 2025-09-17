@@ -1,61 +1,70 @@
 #!/usr/bin/env node
 
-import * as yargs from 'yargs';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
-const debug = require('debug')('build:commandline:build');
-
+import createDebug from 'debug';
 import { Builder } from '../lib';
 
-const argv = require('yargs')
-.option('win', {
-    type: 'boolean',
-    describe: 'Build for Windows platform',
-    default: Builder.DEFAULT_OPTIONS.win,
-    alias: 'w',
-})
-.option('mac', {
-    type: 'boolean',
-    describe: 'Build for macOS platform',
-    default: Builder.DEFAULT_OPTIONS.mac,
-    alias: 'm',
-})
-.option('linux', {
-    type: 'boolean',
-    describe: 'Build for Linux platform',
-    default: Builder.DEFAULT_OPTIONS.linux,
-    alias: 'l',
-})
-.option('x86', {
-    type: 'boolean',
-    describe: 'Build for x86 arch',
-    default: Builder.DEFAULT_OPTIONS.x86,
-})
-.option('x64', {
-    type: 'boolean',
-    describe: 'Build for x64 arch',
-    default: Builder.DEFAULT_OPTIONS.x64,
-})
-.option('tasks', {
-    type: 'string',
-    describe: 'List of <PLATFORM>-<ARCH> to build, separated by comma.',
-    default: '',
-})
-.option('chrome-app', {
-    type: 'boolean',
-    describe: 'Build from Chrome App',
-    default: Builder.DEFAULT_OPTIONS.chromeApp,
-})
-.option('mirror', {
-    describe: 'Modify NW.js mirror',
-    default: Builder.DEFAULT_OPTIONS.mirror,
-})
-.option('concurrent', {
-    type: 'boolean',
-    describe: 'Build concurrently',
-    default: Builder.DEFAULT_OPTIONS.concurrent,
-})
-.help()
-.argv;
+const debug = createDebug('build:commandline:build');
+
+const argv = yargs(hideBin(process.argv))
+    .option('win', {
+        type: 'boolean',
+        describe: 'Build for Windows platform',
+        default: Builder.DEFAULT_OPTIONS.win,
+        alias: 'w',
+    })
+    .option('mac', {
+        type: 'boolean',
+        describe: 'Build for macOS platform',
+        default: Builder.DEFAULT_OPTIONS.mac,
+        alias: 'm',
+    })
+    .option('linux', {
+        type: 'boolean',
+        describe: 'Build for Linux platform',
+        default: Builder.DEFAULT_OPTIONS.linux,
+        alias: 'l',
+    })
+    .option('x86', {
+        type: 'boolean',
+        describe: 'Build for x86 arch',
+        default: Builder.DEFAULT_OPTIONS.x86,
+    })
+    .option('x64', {
+        type: 'boolean',
+        describe: 'Build for x64 arch',
+        default: Builder.DEFAULT_OPTIONS.x64,
+    })
+    .option('tasks', {
+        type: 'string',
+        describe: 'List of <PLATFORM>-<ARCH> to build, separated by comma.',
+        default: '',
+    })
+    .option('chrome-app', {
+        type: 'boolean',
+        describe: 'Build from Chrome App',
+        default: Builder.DEFAULT_OPTIONS.chromeApp,
+    })
+    .option('mirror', {
+        describe: 'Modify NW.js mirror',
+        default: Builder.DEFAULT_OPTIONS.mirror,
+    })
+    .option('concurrent', {
+        type: 'boolean',
+        describe: 'Build concurrently',
+        default: Builder.DEFAULT_OPTIONS.concurrent,
+    })
+    .option('mute', {
+        type: 'boolean',
+        default: Builder.DEFAULT_OPTIONS.mute
+    })
+    .option('forceCaches', {
+        type: 'boolean',
+        default: Builder.DEFAULT_OPTIONS.forceCaches
+    })
+    .help().parseSync();
 
 (async () => {
 
@@ -73,16 +82,16 @@ const argv = require('yargs')
         concurrent: argv.concurrent,
         mute: argv.mute,
         forceCaches: argv.forceCaches
-    }, argv._.shift());
+    }, argv._.shift()?.toString() ?? '');
 
     await builder.build();
 
     process.exitCode = 0;
 
 })()
-.catch((err) => {
+    .catch((err) => {
 
-    console.error(err);
-    process.exitCode = -1;
+        console.error(err);
+        process.exitCode = -1;
 
-});
+    });

@@ -1,18 +1,17 @@
-
-import { dirname, basename, resolve } from 'path';
-
-import * as request from 'request';
-import * as ProgressBar from 'progress';
-import { ensureDirSync, exists, lstat, writeFile } from 'fs-extra';
-
-const debug = require('debug')('build:downloader');
-const progress = require('request-progress');
+import path from 'path';
+import got from 'got';
+import progress from 'got';
+import ProgressBar from 'progress';
+import fs from 'fs-extra';
+import createDebug from 'debug';
 
 import { Event } from './Event';
-import { mergeOptions, extractGeneric } from '../util';
+import { extractGeneric } from '../util';
 
-const DIR_CACHES = resolve(dirname(module.filename), '..', '..', '..', 'caches');
-ensureDirSync(DIR_CACHES);
+const debug = createDebug('build:downloader');
+
+const DIR_CACHES = path.resolve(path.dirname(module.filename), '..', '..', '..', 'caches');
+fs.ensureDirSync(DIR_CACHES);
 
 export interface IRequestProgress {
     percent: number;
@@ -31,18 +30,18 @@ export abstract class DownloaderBase {
 
     public onProgress: Event<IRequestProgress> = new Event('progress');
 
-    public static readonly DEFAULT_DESTINATION: string = DIR_CACHES;
+    public static readonly DEFAULT_DESTINATION: string = (DIR_CACHES || '');
 
-    protected destination: string = DownloaderBase.DEFAULT_DESTINATION;
+    protected destination: string = (DownloaderBase.DEFAULT_DESTINATION || '');
 
-    public abstract async fetch(): Promise<string>;
+    public abstract fetch(): Promise<string>;
 
     protected abstract handleVersion(version: string): Promise<string>;
 
     public async fetchAndExtract() {
 
         const archive = await this.fetch();
-        const dest = `${ archive }-extracted`;
+        const dest = `${archive}-extracted`;
 
         await extractGeneric(archive, dest);
 
@@ -52,9 +51,9 @@ export abstract class DownloaderBase {
 
     protected getVersions(): Promise<any> {
         return new Promise((resolve, reject) => {
-            request('https://nwjs.io/versions.json', (err, res, body) => {
+            got('https://nwjs.io/versions.json', (err: any, _res: any, body: string) => {
 
-                if(err) {
+                if (err) {
                     return reject(err);
                 }
 
@@ -71,80 +70,82 @@ export abstract class DownloaderBase {
 
     protected handlePlatform(platform: string) {
 
-        switch(platform) {
-        case 'win32':
-        case 'win':
-            return 'win';
-        case 'darwin':
-        case 'osx':
-        case 'mac':
-            return 'osx';
-        case 'linux':
-            return 'linux';
-        default:
-            throw new Error('ERROR_UNKNOWN_PLATFORM');
+        switch (platform) {
+            case 'win32':
+            case 'win':
+                return 'win';
+            case 'darwin':
+            case 'osx':
+            case 'mac':
+                return 'osx';
+            case 'linux':
+                return 'linux';
+            default:
+                throw new Error('ERROR_UNKNOWN_PLATFORM');
         }
 
     }
 
     protected handleArch(arch: string) {
 
-        switch(arch) {
-        case 'x86':
-        case 'ia32':
-            return 'ia32';
-        case 'x64':
-            return 'x64';
-        default:
-            throw new Error('ERROR_UNKNOWN_PLATFORM');
+        switch (arch) {
+            case 'x86':
+            case 'ia32':
+                return 'ia32';
+            case 'x64':
+                return 'x64';
+            default:
+                throw new Error('ERROR_UNKNOWN_PLATFORM');
         }
 
     }
 
-    protected getLocalSize(path: string): Promise<number> {
-        return lstat(path)
-        .then(stat => stat.size);
+    protected async getLocalSize(path: string): Promise<number> {
+        const stat = await fs.lstat(path);
+        return stat.size;
     }
 
     protected getRemoteSize(url: string): Promise<number> {
-        return new Promise((resolve, reject) => {
-            request.head(url, {
-                followAllRedirects: true,
-            })
-            .on('error', reject)
-            .on('response', res => resolve(parseInt(<string>(res.headers['content-length']), 10)));
+        return new Promise(async (resolve, reject) => {
+            try {
+                const res = await got.head(url, {
+                    followRedirect: true, // request의 followAllRedirects 대응
+                });
+                const len = parseInt(res.headers['content-length'] || '0', 10);
+                resolve(len);
+            } catch (err) {
+                reject(err);
+            }
         });
     }
 
-    protected isFileExists(path: string) {
-        return new Promise((resolve, reject) => {
-            exists(path, resolve);
-        });
+    protected async isFileExists(pathStr: string): Promise<boolean> {
+        return await fs.pathExists(pathStr);
     }
 
-    protected async isFileSynced(url: string, path: string) {
+    protected async isFileSynced(url: string, pathStr: string) {
 
-        const localSize = await this.getLocalSize(path);
+        const localSize = await this.getLocalSize(pathStr);
         const remoteSize = await this.getRemoteSize(url);
 
         debug('in isFileSynced', 'localSize', localSize);
         debug('in isFileSynced', 'remoteSize', remoteSize);
 
-        return localSize == remoteSize;
+        return localSize === remoteSize;
 
     }
 
-    protected async download(url: string, filename: string, path: string, showProgress: boolean) {
+    protected async download(url: string, filename: string, pathStr: string, showProgress: boolean) {
 
-        let bar: ProgressBar = null;
+        let bar: ProgressBar | null = null;
 
         const onProgress = (state: IRequestProgress) => {
 
-            if(!state.size.total) {
+            if (!state.size.total) {
                 return;
             }
 
-            if(!bar) {
+            if (!bar) {
                 bar = new ProgressBar('[:bar] :speedKB/s :etas', {
                     width: 50,
                     total: state.size.total,
@@ -158,45 +159,40 @@ export abstract class DownloaderBase {
 
         };
 
-        if(showProgress) {
+        if (showProgress) {
             this.onProgress.subscribe(onProgress);
         }
 
         debug('in download', 'start downloading', filename);
 
         await new Promise((resolve, reject) => {
-            progress(request(url, {
+            progress(got(url, {
                 encoding: null,
-            }, (err, res, data) => {
+            }, (err: any, res: { statusCode: number; }, data: string | NodeJS.ArrayBufferView) => {
 
-                if(err) {
-                    return reject(err);
-                }
-
-                if(res.statusCode != 200) {
-                    const e = new Error(`ERROR_STATUS_CODE statusCode = ${ res.statusCode }`);
+                if (err) return reject(err);
+                if (res.statusCode !== 200) {
+                    const e = new Error(`ERROR_STATUS_CODE statusCode = ${res.statusCode}`);
                     return reject(e);
                 }
-
-                writeFile(path, data, err => err ? reject(err) : resolve());
-
+                fs.writeFile(pathStr, data, (err: any) => err ? reject(err) : resolve());
             }))
-            .on('progress', (state: IRequestProgress) => {
-                this.onProgress.trigger(state);
-            });
+                .on('progress', (state: IRequestProgress) => {
+                    this.onProgress.trigger(state);
+                });
         });
 
         debug('in fetch', 'end downloading', filename);
 
-        if(showProgress) {
+        if (showProgress) {
             this.onProgress.unsubscribe(onProgress);
-            if(bar) {
+            if (bar) {
                 console.info('');
-                bar.terminate();
+                (bar as ProgressBar)?.terminate();
             }
         }
 
-        return path;
+        return pathStr;
 
     }
 

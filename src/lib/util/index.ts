@@ -1,13 +1,13 @@
+import { dirname, join, relative } from 'path';
+import { exec, spawn } from 'child_process';
+import tmp from 'tmp';
+import fs from 'fs-extra';
+import createDebug from 'debug';
+import globby from 'globby';
 
-import { join, dirname, relative } from 'path';
-import { spawn, exec } from 'child_process';
-
-import * as tmp from 'tmp';
 tmp.setGracefulCleanup();
-import { realpath, lstat, ensureDir, readFile, outputFile } from 'fs-extra';
 
-const debug = require('debug')('build:util');
-const globby = require('globby');
+const debug = createDebug('build:util');
 
 export * from './archive';
 
@@ -31,37 +31,37 @@ export function findExecutable(platform: string, runtimeDir: string): Promise<st
     return new Promise((resolve, reject) => {
 
         const pattern = (() => {
-            switch(platform) {
-            case 'win32':
-            case 'win':
-                return '**/nw.exe';
-            case 'darwin':
-            case 'osx':
-            case 'mac':
-                return '**/nwjs.app/Contents/MacOS/nwjs';
-            case 'linux':
-                return '**/nw';
-            default:
-                throw new Error('ERROR_UNKNOWN_PLATFORM');
+            switch (platform) {
+                case 'win32':
+                case 'win':
+                    return '**/nw.exe';
+                case 'darwin':
+                case 'osx':
+                case 'mac':
+                    return '**/nwjs.app/Contents/MacOS/nwjs';
+                case 'linux':
+                    return '**/nw';
+                default:
+                    throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
         })();
 
         // FIXME: globby.d.ts.
-        globby([ pattern ], {
+        globby([pattern], {
             cwd: runtimeDir,
         })
-        .then((matches: string[]) => {
+            .then((matches: string[]) => {
 
-            if(matches.length == 0) {
-                const err = new Error('ERROR_EMPTY_MATCHES');
-                return reject(err);
-            }
+                if (matches.length === 0) {
+                    const err = new Error('ERROR_EMPTY_MATCHES');
+                    return reject(err);
+                }
 
-            debug('in findExecutable', 'matches', matches);
+                debug('in findExecutable', 'matches', matches);
 
-            resolve(join(runtimeDir, matches[0]));
+                resolve(join(runtimeDir, matches[0]));
 
-        });
+            });
 
     });
 }
@@ -70,37 +70,37 @@ export function findFFmpeg(platform: string, dir: string): Promise<string> {
     return new Promise((resolve, reject) => {
 
         const pattern = (() => {
-            switch(platform) {
-            case 'win32':
-            case 'win':
-                return '**/ffmpeg.dll';
-            case 'darwin':
-            case 'osx':
-            case 'mac':
-                return '**/libffmpeg.dylib';
-            case 'linux':
-                return '**/libffmpeg.so';
-            default:
-                throw new Error('ERROR_UNKNOWN_PLATFORM');
+            switch (platform) {
+                case 'win32':
+                case 'win':
+                    return '**/ffmpeg.dll';
+                case 'darwin':
+                case 'osx':
+                case 'mac':
+                    return '**/libffmpeg.dylib';
+                case 'linux':
+                    return '**/libffmpeg.so';
+                default:
+                    throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
         })();
 
         // FIXME: globby.d.ts.
-        globby([ pattern ], {
+        globby([pattern], {
             cwd: dir,
         })
-        .then((matches: string[]) => {
+            .then((matches: string[]) => {
 
-            if(matches.length == 0) {
-                const err = new Error('ERROR_EMPTY_MATCHES');
-                return reject(err);
-            }
+                if (matches.length === 0) {
+                    const err = new Error('ERROR_EMPTY_MATCHES');
+                    return reject(err);
+                }
 
-            debug('in findFFmpeg', 'matches', matches);
+                debug('in findFFmpeg', 'matches', matches);
 
-            resolve(join(dir, matches[0]));
+                resolve(join(dir, matches[0]));
 
-        });
+            });
 
     });
 }
@@ -109,37 +109,37 @@ export function findRuntimeRoot(platform: string, runtimeDir: string): Promise<s
     return new Promise((resolve, reject) => {
 
         const pattern = (() => {
-            switch(platform) {
-            case 'win32':
-            case 'win':
-                return '**/nw.exe';
-            case 'darwin':
-            case 'osx':
-            case 'mac':
-                return '**/nwjs.app';
-            case 'linux':
-                return '**/nw';
-            default:
-                throw new Error('ERROR_UNKNOWN_PLATFORM');
+            switch (platform) {
+                case 'win32':
+                case 'win':
+                    return '**/nw.exe';
+                case 'darwin':
+                case 'osx':
+                case 'mac':
+                    return '**/nwjs.app';
+                case 'linux':
+                    return '**/nw';
+                default:
+                    throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
         })();
 
         // FIXME: globby.d.ts.
-        globby([ pattern ], {
+        globby([pattern], {
             cwd: runtimeDir,
         })
-        .then((matches: string[]) => {
+            .then((matches: string[]) => {
 
-            if(matches.length == 0) {
-                const err = new Error('ERROR_EMPTY_MATCHES');
-                return reject(err);
-            }
+                if (matches.length === 0) {
+                    const err = new Error('ERROR_EMPTY_MATCHES');
+                    return reject(err);
+                }
 
-            debug('in findExecutable', 'matches', matches);
+                debug('in findExecutable', 'matches', matches);
 
-            resolve(join(runtimeDir, dirname(matches[0])));
+                resolve(join(runtimeDir, dirname(matches[0])));
 
-        });
+            });
 
     });
 }
@@ -149,36 +149,32 @@ export async function findExcludableDependencies(dir: string, pkg: any) {
     const prod = await execAsync('npm ls --prod --parseable', {
         cwd: dir,
     })
-    .then(({
-        stdout, stderr,
-    }) => {
-        return stdout.split(/\r?\n/)
-        .filter(path => path)
-        .map((path) => {
-            return relative(dir, path);
+        .then(({
+                   stdout, stderr,
+               }) => {
+            return stdout.split(/\r?\n/)
+                .filter(path => path)
+                .map((path) => {
+                    return relative(dir, path);
+                });
         });
-    });
 
     debug('in findExcludableDependencies', 'prod', prod);
 
-    const dev = await execAsync('npm ls --dev --parseable', {
-        cwd: dir,
-    })
-    .then(({
-        stdout, stderr,
-    }) => {
-        return stdout.split(/\r?\n/)
-        .filter(path => path)
-        .map((path) => {
-            return relative(dir, path);
+    const dev = await execAsync('npm ls --dev --parseable', {cwd: dir})
+        .then(({stdout, stderr}) => {
+            return stdout.split(/\r?\n/)
+                .filter(path => path)
+                .map((path) => {
+                    return relative(dir, path);
+                });
         });
-    });
 
     debug('in findExcludableDependencies', 'dev', dev);
 
-    const excludable = [];
-    for(const d of dev) {
-        if(prod.indexOf(d) == -1) {
+    const excludable: string[] = [];
+    for (const d of dev) {
+        if (prod.indexOf(d) === -1) {
             excludable.push(d);
         }
     }
@@ -191,8 +187,7 @@ export async function findExcludableDependencies(dir: string, pkg: any) {
 
 export function tmpName(options: any = {}): Promise<string> {
     return new Promise((resolve, reject) => {
-        tmp.tmpName(Object.assign({}, {
-        }, options), (err, path) => err ? reject(err) : resolve(path));
+        tmp.tmpName(Object.assign({}, {}, options), (err, path) => err ? reject(err) : resolve(path));
     });
 }
 
@@ -205,7 +200,9 @@ export function tmpFile(options: any = {}): Promise<{
         tmp.file(Object.assign({}, {
             //discardDescriptor: true,
         }, options), (err, path, fd, cleanup) => err ? reject(err) : resolve({
-            path, fd, cleanup,
+            path,
+            fd: (fd ?? -1),
+            cleanup,
         }));
     });
 }
@@ -225,23 +222,20 @@ export function tmpDir(options: any = {}): Promise<{
 
 export function fixWindowsVersion(version: string, build: number = 0) {
     return /^\d+\.\d+\.\d+$/.test(version)
-    ? `${ version }.${ build }`
-    : version;
+        ? `${version}.${build}`
+        : version;
 }
 
 export async function copyFileAsync(src: string, dest: string) {
 
-    const rsrc = await realpath(src);
+    const rsrc = await fs.realpath(src);
+    const stats = await fs.lstat(rsrc);
 
-    const stats = await lstat(rsrc);
-
-    if(stats.isDirectory()) {
+    if (stats.isDirectory()) {
         //await ensureDirAsync(dest);
+    } else {
+        await fs.outputFile(dest, await fs.readFile(rsrc));
     }
-    else {
-        await outputFile(dest, await readFile(rsrc));
-    }
-
 }
 
 export function spawnAsync(executable: string, args: string[], options: any = {}): Promise<{
@@ -256,31 +250,29 @@ export function spawnAsync(executable: string, args: string[], options: any = {}
 
         const child = spawn(executable, args, options);
 
-        if(child.stdout) {
+        if (child.stdout) {
             child.stdout.on('data', chunk => debug('in spawnAsync', 'stdout', chunk.toString()));
         }
 
-        if(child.stderr) {
+        if (child.stderr) {
             child.stderr.on('data', chunk => debug('in spawnAsync', 'stderr', chunk.toString()));
         }
 
         child.on('close', (code, signal) => {
-            if(!options.detached) {
+            if (!options.detached) {
                 resolve({
-                    code, signal,
+                    code: code ?? -1,        // fallback 값 부여
+                    signal: signal ?? 'UNKNOWN',    // fallback 값 부여
                 });
             }
         });
 
-        if(options.detached) {
-
+        if (options.detached) {
             child.unref();
-
             resolve({
                 code: 0,
                 signal: '',
             });
-
         }
 
     });
@@ -296,23 +288,20 @@ export function execAsync(command: string, options: any = {}): Promise<{
         debug('in execAsync', 'options', options);
 
         const child = exec(command, options, (err, stdout, stderr) => {
-            if(!options.detached) {
+            if (!options.detached) {
                 resolve({
-                    stdout, stderr,
+                    stdout: stdout.toString(),
+                    stderr: stderr.toString(),
                 });
             }
         });
 
-        if(options.detached) {
-
+        if (options.detached) {
             child.unref();
-
             resolve({
-                stdout: null,
-                stderr: null,
+                stdout: 'inherit',
+                stderr: 'inherit',
             });
-
         }
-
     });
 }

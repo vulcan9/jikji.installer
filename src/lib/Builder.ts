@@ -1,21 +1,33 @@
+import path from 'path';
 
-import { dirname, basename, resolve } from 'path';
+import semver from 'semver';
+import fs from 'fs-extra';
 
-import * as semver from 'semver';
-import { ensureDir, emptyDir, readFile, readJson, writeFile, copy, remove, rename, chmod, createReadStream, createWriteStream, readdir } from 'fs-extra';
-import * as Bluebird from 'bluebird';
-
-const debug = require('debug')('build:builder');
-const globby = require('globby');
-const rcedit = require('rcedit');
-const plist = require('plist');
+/* Bluebird removed: using native Promise */
+import createDebug from 'debug';
+import globby from 'globby';
+import rcedit from 'rcedit';
+import plist from 'plist';
 
 import { Downloader } from './Downloader';
 import { FFmpegDownloader } from './FFmpegDownloader';
 import { BuildConfig } from './config';
-import { NsisVersionInfo, DownloaderBase } from './common';
-import { NsisComposer, NsisDiffer, Nsis7Zipper, nsisBuild } from './nsis-gen';
-import { mergeOptions, findExecutable, findFFmpeg, findRuntimeRoot, findExcludableDependencies, tmpName, tmpFile, tmpDir, fixWindowsVersion, copyFileAsync, extractGeneric, compress } from './util';
+import { DownloaderBase, NsisVersionInfo } from './common';
+import { Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen';
+import {
+    compress,
+    copyFileAsync,
+    findExcludableDependencies,
+    findExecutable,
+    findFFmpeg,
+    findRuntimeRoot,
+    fixWindowsVersion,
+    mergeOptions,
+    tmpDir,
+    tmpName
+} from './util';
+
+const debug = createDebug('build:builder');
 
 export interface IParseOutputPatternOptions {
     name: string;
@@ -71,89 +83,108 @@ export class Builder {
 
         const tasks: string[][] = [];
 
-        [ 'win', 'mac', 'linux' ].map((platform) => {
-            [ 'x86', 'x64' ].map((arch) => {
-                if((<any>this.options)[platform] && (<any>this.options)[arch]) {
-                    tasks.push([ platform, arch ]);
+        [
+            'win',
+            'mac',
+            'linux'
+        ].map((platform) => {
+            [
+                'x86',
+                'x64'
+            ].map((arch) => {
+                if ((<any>this.options)[platform] && (<any>this.options)[arch]) {
+                    tasks.push([
+                        platform,
+                        arch
+                    ]);
                 }
             });
         });
 
-        for(const task of this.options.tasks) {
+        for (const task of this.options.tasks ?? []) {
 
-            const [ platform, arch ] = task.split('-');
+            const [platform, arch] = task.split('-');
 
-            if([ 'win', 'mac', 'linux' ].indexOf(platform) >= 0) {
-                if([ 'x86', 'x64' ].indexOf(arch) >= 0) {
-                    tasks.push([ platform, arch ]);
+            if ([
+                'win',
+                'mac',
+                'linux'
+            ].indexOf(platform) >= 0) {
+                if ([
+                    'x86',
+                    'x64'
+                ].indexOf(arch) >= 0) {
+                    tasks.push([
+                        platform,
+                        arch
+                    ]);
                 }
             }
 
         }
 
-        if(!this.options.mute) {
+        if (!this.options.mute) {
             console.info('Starting building tasks...', {
                 tasks,
                 concurrent: this.options.concurrent,
             });
         }
 
-        if(tasks.length == 0) {
+        if (tasks.length === 0) {
             throw new Error('ERROR_NO_TASK');
         }
 
-        if(this.options.concurrent) {
+        if (this.options.concurrent) {
+            await Promise.all(
+                tasks.map(async ([platform, arch]) => {
+                    const options: any = {};
+                    options[platform] = true;
+                    options[arch] = true;
+                    options.mirror = this.options.mirror;
+                    options.concurrent = false;
+                    options.mute = true;
 
-            await Bluebird.map(tasks, async ([ platform, arch ]) => {
+                    const builder = new Builder(options, this.dir);
 
-                const options: any = {};
-                options[platform] = true;
-                options[arch] = true;
-                options.mirror = this.options.mirror;
-                options.concurrent = false;
-                options.mute = true;
+                    const started = Date.now();
 
-                const builder = new Builder(options, this.dir);
+                    if (!this.options.mute) {
+                        console.info(`Building for ${platform}, ${arch} starts...`);
+                    }
 
-                const started = Date.now();
+                    await builder.build();
 
-                if(!this.options.mute) {
-                    console.info(`Building for ${ platform }, ${ arch } starts...`);
-                }
+                    if (!this.options.mute) {
+                        console.info(
+                            `Building for ${platform}, ${arch} ends within ${this.getTimeDiff(started)}s.`
+                        );
+                    }
+                })
+            );
 
-                await builder.build();
+        } else {
 
-                if(!this.options.mute) {
-                    console.info(`Building for ${ platform }, ${ arch } ends within ${ this.getTimeDiff(started) }s.`);
-                }
-
-            });
-
-        }
-        else {
-
-            const pkg: any = await readJson(resolve(this.dir, this.options.chromeApp ? 'manifest.json' : 'package.json'));
+            const pkg: any = await fs.readJson(path.resolve(this.dir, this.options.chromeApp ? 'manifest.json' : 'package.json'));
             const config = new BuildConfig(pkg);
 
             debug('in build', 'config', config);
 
-            for(const [ platform, arch ] of tasks) {
+            for (const [platform, arch] of tasks) {
 
                 const started = Date.now();
 
-                if(!this.options.mute) {
-                    console.info(`Building for ${ platform }, ${ arch } starts...`);
+                if (!this.options.mute) {
+                    console.info(`Building for ${platform}, ${arch} starts...`);
                 }
 
                 try {
                     await this.buildTask(platform, arch, pkg, config);
-                }
-                catch(err) {
+                } catch (err) {
                     console.warn(err);
                 }
 
-                if(!this.options.mute) {
-                    console.info(`Building for ${ platform }, ${ arch } ends within ${ this.getTimeDiff(started) }s.`);
+                if (!this.options.mute) {
+                    console.info(`Building for ${platform}, ${arch} ends within ${this.getTimeDiff(started)}s.`);
                 }
 
             }
@@ -170,9 +201,9 @@ export class Builder {
 
         const json: any = {};
 
-        for(const key in pkg) {
-            if(pkg.hasOwnProperty(key) && config.strippedProperties.indexOf(key) === -1) {
-                if (config.overriddenProperties && config.overriddenProperties.hasOwnProperty(key) ) {
+        for (const key in pkg) {
+            if (pkg.hasOwnProperty(key) && config.strippedProperties.indexOf(key) === -1) {
+                if (config.overriddenProperties && config.overriddenProperties.hasOwnProperty(key)) {
                     json[key] = config.overriddenProperties[key];
                 } else {
                     json[key] = pkg[key];
@@ -180,24 +211,24 @@ export class Builder {
             }
         }
 
-        await writeFile(path, JSON.stringify(json));
+        await fs.writeFile(path, JSON.stringify(json));
 
     }
 
     protected parseOutputPattern(pattern: string, options: IParseOutputPatternOptions, pkg: any, config: BuildConfig) {
 
         return pattern.replace(/\$\{\s*(\w+)\s*\}/g, (match: string, key: string) => {
-            switch(key.toLowerCase()) {
-            case 'name':
-                return options.name;
-            case 'version':
-                return options.version;
-            case 'platform':
-                return options.platform;
-            case 'arch':
-                return options.arch;
-            default:
-                throw new Error('ERROR_KEY_UNKNOWN');
+            switch (key.toLowerCase()) {
+                case 'name':
+                    return options.name;
+                case 'version':
+                    return options.version;
+                case 'platform':
+                    return options.platform;
+                case 'arch':
+                    return options.arch;
+                default:
+                    throw new Error('ERROR_KEY_UNKNOWN');
             }
         });
 
@@ -206,8 +237,8 @@ export class Builder {
     protected combineExecutable(executable: string, nwFile: string) {
         return new Promise((resolve, reject) => {
 
-            const nwStream = createReadStream(nwFile);
-            const stream = createWriteStream(executable, {
+            const nwStream = fs.createReadStream(nwFile);
+            const stream = fs.createWriteStream(executable, {
                 flags: 'a',
             });
 
@@ -221,24 +252,20 @@ export class Builder {
         });
     }
 
-    protected readPlist(path: string): Promise<any> {
-        return readFile(path, {
-                encoding: 'utf-8',
-        })
-        .then(data => plist.parse(data));
+    protected async readPlist(path: string): Promise<any> {
+        const data = await fs.readFile(path, {encoding: 'utf8'});
+        return plist.parse(data.toString()) as any;
     }
 
-    protected writePlist(path: string, p: any) {
-        return writeFile(path, plist.build(p));
+    protected async writePlist(path: string, p: any) {
+        return fs.writeFile(path, plist.build(p));
     }
 
     protected updateWinResources(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const pathResolve = resolve;
-
         return new Promise((resolve, reject) => {
 
-            const path = pathResolve(targetDir, 'nw.exe');
+            const pathStr = path.resolve(targetDir, 'nw.exe');
 
             const rc = {
                 'product-version': fixWindowsVersion(config.win.productVersion),
@@ -250,43 +277,43 @@ export class Builder {
                     LegalCopyright: config.win.copyright,
                     ...config.win.versionStrings,
                 },
-                'icon': config.win.icon ? pathResolve(this.dir, config.win.icon) : undefined,
+                'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
             };
 
-            rcedit(path, rc, (err: Error) => err ? reject(err) : resolve());
+            rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
 
         });
     }
 
-    protected renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+    protected async renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const src = resolve(targetDir, 'nw.exe');
-        const dest = resolve(targetDir, `${ config.win.exeName }.exe`);
+        const src = path.resolve(targetDir, 'nw.exe');
+        const dest = path.resolve(targetDir, `${config.win.exeName}.exe`);
 
-        return rename(src, dest);
+        return await fs.rename(src, dest);
 
     }
 
     protected async updatePlist(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const path = resolve(targetDir, './nwjs.app/Contents/Info.plist');
+        const pathStr = path.resolve(targetDir, './nwjs.app/Contents/Info.plist');
 
-        const plist = await this.readPlist(path);
+        const plistObj = await this.readPlist(pathStr);
 
-        plist.CFBundleIdentifier = config.appId;
-        plist.CFBundleName = config.mac.name;
-        plist.CFBundleExecutable = config.mac.displayName;
-        plist.CFBundleDisplayName = config.mac.displayName;
-        plist.CFBundleVersion = config.mac.version;
-        plist.CFBundleShortVersionString = config.mac.version;
+        plistObj.CFBundleIdentifier = config.appId;
+        plistObj.CFBundleName = config.mac.name;
+        plistObj.CFBundleExecutable = config.mac.displayName;
+        plistObj.CFBundleDisplayName = config.mac.displayName;
+        plistObj.CFBundleVersion = config.mac.version;
+        plistObj.CFBundleShortVersionString = config.mac.version;
 
-        for(const key in config.mac.plistStrings) {
-            if(config.mac.plistStrings.hasOwnProperty(key)) {
-                plist[key] = config.mac.plistStrings[key];
+        for (const key in config.mac.plistStrings) {
+            if (config.mac.plistStrings.hasOwnProperty(key)) {
+                plistObj[key] = config.mac.plistStrings[key];
             }
         }
 
-        await this.writePlist(path, plist);
+        await this.writePlist(pathStr, plistObj);
 
     }
 
@@ -296,84 +323,84 @@ export class Builder {
         }
 
         const helperPath = await this.findMacHelperApp(targetDir);
-        const path = resolve(helperPath, 'Contents/Info.plist');
+        const pathStr = path.resolve(helperPath, 'Contents/Info.plist');
 
-        const plist = await this.readPlist(path);
+        const plistObj = await this.readPlist(pathStr);
         const bin = pkg.product_string + ' Helper';
 
-        plist.CFBundleIdentifier = config.appId + '.helper';
-        plist.CFBundleDisplayName = bin;
-        plist.CFBundleExecutable = bin;
-        plist.CFBundleName = bin;
+        plistObj.CFBundleIdentifier = config.appId + '.helper';
+        plistObj.CFBundleDisplayName = bin;
+        plistObj.CFBundleExecutable = bin;
+        plistObj.CFBundleName = bin;
 
-        await this.writePlist(path, plist);
+        await this.writePlist(pathStr, plistObj);
     }
 
     protected async updateMacIcons(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
         const copyIcon = async (iconPath: string, dest: string) => {
-            if(!iconPath) {
+            if (!iconPath) {
                 // use the default
                 return;
             }
 
-            await copy(resolve(this.dir, iconPath), dest);
+            await fs.copy(path.resolve(this.dir, iconPath), dest);
         };
 
-        await copyIcon(config.mac.icon, resolve(targetDir, './nwjs.app/Contents/Resources/app.icns'));
-        await copyIcon(config.mac.documentIcon, resolve(targetDir, './nwjs.app/Contents/Resources/document.icns'));
+        await copyIcon(config.mac.icon, path.resolve(targetDir, './nwjs.app/Contents/Resources/app.icns'));
+        await copyIcon(config.mac.documentIcon, path.resolve(targetDir, './nwjs.app/Contents/Resources/document.icns'));
     }
 
     protected async fixMacMeta(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const files = await globby([ '**/InfoPlist.strings' ], {
+        const files = await globby(['**/InfoPlist.strings'], {
             cwd: targetDir,
         });
 
-        for(const file of files) {
+        for (const file of files) {
 
-            const path = resolve(targetDir, file);
+            const pathStr = path.resolve(targetDir, file);
 
             // Different versions has different encodings for `InforPlist.strings`.
             // We determine encoding by evaluating bytes of `CF` here.
-            const data = await readFile(path);
+            const data = await fs.readFile(pathStr);
             const encoding = data.indexOf(Buffer.from('43004600', 'hex')) >= 0
-            ? 'ucs2' : 'utf-8';
+                ? 'ucs2' : 'utf-8';
 
             const strings = data.toString(encoding);
 
             const newStrings = strings.replace(/([A-Za-z]+)\s+=\s+"(.+?)";/g, (match: string, key: string, value: string) => {
-                switch(key) {
-                case 'CFBundleName':
-                    return `${ key } = "${ config.mac.name }";`;
-                case 'CFBundleDisplayName':
-                    return `${ key } = "${ config.mac.displayName }";`;
-                case 'CFBundleGetInfoString':
-                    return `${ key } = "${ config.mac.version }";`;
-                case 'NSContactsUsageDescription':
-                    return `${ key } = "${ config.mac.description }";`;
-                case 'NSHumanReadableCopyright':
-                    return `${ key } = "${ config.mac.copyright }";`;
-                default:
-                    return `${ key } = "${ value }";`;
+                switch (key) {
+                    case 'CFBundleName':
+                        return `${key} = "${config.mac.name}";`;
+                    case 'CFBundleDisplayName':
+                        return `${key} = "${config.mac.displayName}";`;
+                    case 'CFBundleGetInfoString':
+                        return `${key} = "${config.mac.version}";`;
+                    case 'NSContactsUsageDescription':
+                        return `${key} = "${config.mac.description}";`;
+                    case 'NSHumanReadableCopyright':
+                        return `${key} = "${config.mac.copyright}";`;
+                    default:
+                        return `${key} = "${value}";`;
                 }
             });
 
-            await writeFile(path, Buffer.from(newStrings, encoding));
+            await fs.writeFile(pathStr, Buffer.from(newStrings, encoding));
 
         }
 
     }
 
     protected async renameMacApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-        const app = resolve(targetDir, 'nwjs.app');
-        const bin = resolve(app, './Contents/MacOS/nwjs');
+        const app = path.resolve(targetDir, 'nwjs.app');
+        const bin = path.resolve(app, './Contents/MacOS/nwjs');
         let dest = bin.replace(/nwjs$/, config.mac.displayName);
 
-        await rename(bin, dest);
+        await fs.rename(bin, dest);
 
         dest = app.replace(/nwjs\.app$/, `${config.mac.displayName}.app`);
 
-        return rename(app, dest);
+        return await fs.rename(app, dest);
     }
 
     protected async renameMacHelperApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -383,57 +410,57 @@ export class Builder {
 
         const app = await this.findMacHelperApp(targetDir);
 
-        const bin = resolve(app, './Contents/MacOS/nwjs Helper');
+        const bin = path.resolve(app, './Contents/MacOS/nwjs Helper');
         let dest = bin.replace(/nwjs Helper$/, `${pkg.product_string} Helper`);
 
-        await rename(bin, dest);
+        await fs.rename(bin, dest);
 
         dest = app.replace(/nwjs Helper\.app$/, `${pkg.product_string} Helper.app`);
 
-        return rename(app, dest);
+        return await fs.rename(app, dest);
     }
 
     protected canRenameMacHelperApp(pkg: any, config: BuildConfig): boolean {
-      if (semver.lt(config.nwVersion, '0.24.4')) {
-        // this version doesn't support Helper app renaming.
-        return false;
-      }
+        if (semver.lt(config.nwVersion, '0.24.4')) {
+            // this version doesn't support Helper app renaming.
+            return false;
+        }
 
-      if (!pkg.product_string) {
-        // we can't rename the Helper app as we don't have a new name.
-        return false;
-      }
+        if (!pkg.product_string) {
+            // we can't rename the Helper app as we don't have a new name.
+            return false;
+        }
 
-      return true;
+        return true;
     }
 
     protected async findMacHelperApp(targetDir: string): Promise<string> {
-        const path = resolve(targetDir, './nwjs.app/Contents/Versions');
+        const pathStr = path.resolve(targetDir, './nwjs.app/Contents/Versions');
 
         // what version are we actually dealing with?
-        const versions = await readdir(path);
+        const versions = await fs.readdir(pathStr);
 
         if (!versions || versions.length !== 1) {
             throw new Error("Can't rename the Helper as we can't find it");
         }
 
-        return resolve(path, versions[0], 'nwjs Helper.app');
+        return path.resolve(pathStr, versions[0], 'nwjs Helper.app');
     }
 
     protected async fixLinuxMode(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const path = resolve(targetDir, 'nw');
+        const pathStr = path.resolve(targetDir, 'nw');
 
-        await chmod(path, 0o744);
+        await fs.chmod(pathStr, 0o744);
 
     }
 
-    protected renameLinuxApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+    protected async renameLinuxApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
-        const src = resolve(targetDir, 'nw');
-        const dest = resolve(targetDir, `${ pkg.name }`);
+        const src = path.resolve(targetDir, 'nw');
+        const dest = path.resolve(targetDir, `${pkg.name}`);
 
-        return rename(src, dest);
+        return await fs.rename(src, dest);
 
     }
 
@@ -467,12 +494,15 @@ export class Builder {
         ];
 
         const dependenciesExcludes = await findExcludableDependencies(this.dir, pkg)
-        .then((excludable) => {
-            return excludable.map(excludable => [ excludable, `${ excludable }/**/*` ]);
-        })
-        .then((excludes) => {
-            return Array.prototype.concat.apply([], excludes);
-        });
+            .then((excludable) => {
+                return excludable.map(excludable => [
+                    excludable,
+                    `${excludable}/**/*`
+                ]);
+            })
+            .then((excludes) => {
+                return Array.prototype.concat.apply([], excludes);
+            });
 
         debug('in copyFiles', 'dependenciesExcludes', dependenciesExcludes);
 
@@ -480,7 +510,10 @@ export class Builder {
             ...config.excludes,
             ...generalExcludes,
             ...dependenciesExcludes,
-            ...[ config.output, `${ config.output }/**/*` ]
+            ...[
+                config.output,
+                `${config.output}/**/*`
+            ]
         ];
 
         debug('in copyFiles', 'ignore', ignore);
@@ -496,53 +529,52 @@ export class Builder {
         debug('in copyFiles', 'config.files', config.files);
         debug('in copyFiles', 'files', files);
 
-        if(config.packed) {
+        if (config.packed) {
 
-            switch(platform) {
-            case 'win32':
-            case 'win':
-            case 'linux':
+            switch (platform) {
+                case 'win32':
+                case 'win':
+                case 'linux':
 
-                const nwFile = await tmpName({
-                    postfix: '.zip',
-                });
+                    const nwFile = await tmpName({
+                        postfix: '.zip',
+                    });
 
-                await compress(this.dir, files.filter((file) => !file.endsWith('/')), 'zip', nwFile);
+                    await compress(this.dir, files.filter((file) => !file.endsWith('/')), 'zip', nwFile);
 
-                const { path: tempDir } = await tmpDir();
-                await this.writeStrippedManifest(resolve(tempDir, 'package.json'), pkg, config);
-                await compress(tempDir, [ './package.json' ], 'zip', nwFile);
-                await remove(tempDir);
+                    const {path: tempDir} = await tmpDir();
+                    await this.writeStrippedManifest(path.resolve(tempDir, 'package.json'), pkg, config);
+                    await compress(tempDir, ['./package.json'], 'zip', nwFile);
+                    await fs.remove(tempDir);
 
-                const executable = await findExecutable(platform, targetDir);
-                await this.combineExecutable(executable, nwFile);
+                    const executable = await findExecutable(platform, targetDir);
+                    await this.combineExecutable(executable, nwFile);
 
-                await remove(nwFile);
+                    await fs.remove(nwFile);
 
-                break;
-            case 'darwin':
-            case 'osx':
-            case 'mac':
+                    break;
+                case 'darwin':
+                case 'osx':
+                case 'mac':
 
-                for(const file of files) {
-                    await copyFileAsync(resolve(this.dir, file), resolve(appRoot, file));
-                }
+                    for (const file of files) {
+                        await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
+                    }
 
-                await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
+                    await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
 
-                break;
-            default:
-                throw new Error('ERROR_UNKNOWN_PLATFORM');
+                    break;
+                default:
+                    throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
 
-        }
-        else {
+        } else {
 
-            for(const file of files) {
-                await copyFileAsync(resolve(this.dir, file), resolve(appRoot, file));
+            for (const file of files) {
+                await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
             }
 
-            await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
+            await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
 
         }
 
@@ -554,12 +586,12 @@ export class Builder {
             platform, arch,
             version: config.nwVersion,
             useCaches: true,
-            showProgress: this.options.mute ? false : true,
+            showProgress: !this.options.mute,
             destination: this.options.destination,
             forceCaches: this.options.forceCaches
         });
 
-        if(!this.options.mute) {
+        if (!this.options.mute) {
             console.info('Fetching FFmpeg prebuilt...', {
                 platform: downloader.options.platform,
                 arch: downloader.options.arch,
@@ -572,16 +604,16 @@ export class Builder {
         const src = await findFFmpeg(platform, ffmpegDir);
         const dest = await findFFmpeg(platform, targetDir);
 
-        await copy(src, dest);
+        await fs.copy(src, dest);
 
     }
 
     protected async buildNsisDiffUpdater(platform: string, arch: string, versionInfo: NsisVersionInfo, fromVersion: string, toVersion: string, pkg: any, config: BuildConfig) {
 
-        const diffNsis = resolve(this.dir, config.output, `${ pkg.name }-${ toVersion } (${ platform } ${ arch })-(update from ${ fromVersion }).exe`);
+        const diffNsis = path.resolve(this.dir, config.output, `${pkg.name}-${toVersion} (${platform} ${arch})-(update from ${fromVersion}).exe`);
 
-        const fromDir = resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
-        const toDir = resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
+        const fromDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
+        const toDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
 
         const data = await (new NsisDiffer(fromDir, toDir, {
 
@@ -596,8 +628,8 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
-            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            theme: config.nsis.theme ? path.resolve(this.dir, config.nsis.theme) : '',
+            license: config.nsis.license ? path.resolve(this.dir, config.nsis.license) : '',
             web: config.nsis.web,
 
             // Compression.
@@ -619,13 +651,13 @@ export class Builder {
         })).make();
 
         const script = await tmpName();
-        await writeFile(script, data);
+        await fs.writeFile(script, data);
 
         await nsisBuild(toDir, script, {
-            mute: this.options.mute,
+            mute: !!this.options.mute,
         });
 
-        if(config.nsis && !config.nsis.scriptFile) await remove(script);
+        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
 
         await versionInfo.addUpdater(toVersion, fromVersion, arch, diffNsis);
 
@@ -633,64 +665,64 @@ export class Builder {
 
     protected async buildDirTarget(platform: string, arch: string, runtimeDir: string, pkg: any, config: BuildConfig): Promise<string> {
 
-        const targetDir = resolve(this.dir, config.output, this.parseOutputPattern(config.outputPattern, {
+        const targetDir = path.resolve(this.dir, config.output, this.parseOutputPattern(config.outputPattern, {
             name: pkg.name,
             version: pkg.version,
             platform, arch,
         }, pkg, config));
         const runtimeRoot = await findRuntimeRoot(platform, runtimeDir);
-        const appRoot = resolve(targetDir, (() => {
-            switch(platform) {
-            case 'win32':
-            case 'win':
-            case 'linux':
-                return './';
-            case 'darwin':
-            case 'osx':
-            case 'mac':
-                return './nwjs.app/Contents/Resources/app.nw/';
-            default:
-                throw new Error('ERROR_UNKNOWN_PLATFORM');
+        const appRoot = path.resolve(targetDir, (() => {
+            switch (platform) {
+                case 'win32':
+                case 'win':
+                case 'linux':
+                    return './';
+                case 'darwin':
+                case 'osx':
+                case 'mac':
+                    return './nwjs.app/Contents/Resources/app.nw/';
+                default:
+                    throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
         })());
 
-        await emptyDir(targetDir);
+        await fs.emptyDir(targetDir);
 
-        await copy(runtimeRoot, targetDir, {
+        await fs.copy(runtimeRoot, targetDir, {
             //dereference: true,
         });
 
-        if(config.ffmpegIntegration) {
+        if (config.ffmpegIntegration) {
             await this.integrateFFmpeg(platform, arch, targetDir, pkg, config);
         }
 
-        await ensureDir(appRoot);
+        await fs.ensureDir(appRoot);
 
         // Copy before refining might void the effort.
 
-        switch(platform) {
-        case 'win32':
-        case 'win':
-            await this.prepareWinBuild(targetDir, appRoot, pkg, config);
-            await this.copyFiles(platform, targetDir, appRoot, pkg, config);
-            await this.renameWinApp(targetDir, appRoot, pkg, config);
-            break;
-        case 'darwin':
-        case 'osx':
-        case 'mac':
-            await this.prepareMacBuild(targetDir, appRoot, pkg, config);
-            await this.copyFiles(platform, targetDir, appRoot, pkg, config);
-            // rename Helper before main app rename.
-            await this.renameMacHelperApp(targetDir, appRoot, pkg, config);
-            await this.renameMacApp(targetDir, appRoot, pkg, config);
-            break;
-        case 'linux':
-            await this.prepareLinuxBuild(targetDir, appRoot, pkg, config);
-            await this.copyFiles(platform, targetDir, appRoot, pkg, config);
-            await this.renameLinuxApp(targetDir, appRoot, pkg, config);
-            break;
-        default:
-            throw new Error('ERROR_UNKNOWN_PLATFORM');
+        switch (platform) {
+            case 'win32':
+            case 'win':
+                await this.prepareWinBuild(targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                await this.renameWinApp(targetDir, appRoot, pkg, config);
+                break;
+            case 'darwin':
+            case 'osx':
+            case 'mac':
+                await this.prepareMacBuild(targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                // rename Helper before main app rename.
+                await this.renameMacHelperApp(targetDir, appRoot, pkg, config);
+                await this.renameMacApp(targetDir, appRoot, pkg, config);
+                break;
+            case 'linux':
+                await this.prepareLinuxBuild(targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                await this.renameLinuxApp(targetDir, appRoot, pkg, config);
+                break;
+            default:
+                throw new Error('ERROR_UNKNOWN_PLATFORM');
         }
 
         return targetDir;
@@ -699,11 +731,11 @@ export class Builder {
 
     protected async buildArchiveTarget(type: string, sourceDir: string) {
 
-        const targetArchive = resolve(dirname(sourceDir), `${ basename(sourceDir) }.${ type }`);
+        const targetArchive = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.${type}`);
 
-        await remove(targetArchive);
+        await fs.remove(targetArchive);
 
-        const files = await globby([ '**/*' ], {
+        const files = await globby(['**/*'], {
             cwd: sourceDir,
         });
 
@@ -715,16 +747,16 @@ export class Builder {
 
     protected async buildNsisTarget(platform: string, arch: string, sourceDir: string, pkg: any, config: BuildConfig) {
 
-        if(platform != 'win') {
-            if(!this.options.mute) {
-                console.info(`Skip building nsis target for ${ platform }.`);
+        if (platform !== 'win') {
+            if (!this.options.mute) {
+                console.info(`Skip building nsis target for ${platform}.`);
             }
             return;
         }
 
-        const versionInfo = new NsisVersionInfo(resolve(this.dir, config.output, 'versions.nsis.json'));
+        const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
 
-        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }.exe`);
+        const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const data = await (new NsisComposer({
 
@@ -739,8 +771,8 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
-            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            theme: config.nsis.theme ? path.resolve(this.dir, config.nsis.theme) : '',
+            license: config.nsis.license ? path.resolve(this.dir, config.nsis.license) : '',
             web: config.nsis.web,
 
             // Compression.
@@ -762,21 +794,21 @@ export class Builder {
         })).make();
 
         const script = await tmpName();
-        await writeFile(script, data);
+        await fs.writeFile(script, data);
 
         await nsisBuild(sourceDir, script, {
-            mute: this.options.mute,
+            mute: !!this.options.mute,
         });
 
-        if(config.nsis && !config.nsis.scriptFile) await remove(script);
+        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
 
-        if(config.nsis.diffUpdaters) {
+        if (config.nsis.diffUpdaters) {
 
-            for(const version of await versionInfo.getVersions()) {
-                if(semver.gt(pkg.version, version)) {
+            for (const version of await versionInfo.getVersions()) {
+                if (semver.gt(pkg.version, version)) {
                     await this.buildNsisDiffUpdater(platform, arch, versionInfo, version, pkg.version, pkg, config);
                 }
             }
@@ -789,18 +821,18 @@ export class Builder {
 
     protected async buildNsis7zTarget(platform: string, arch: string, sourceDir: string, pkg: any, config: BuildConfig) {
 
-        if(platform != 'win') {
-            if(!this.options.mute) {
-                console.info(`Skip building nsis7z target for ${ platform }.`);
+        if (platform !== 'win') {
+            if (!this.options.mute) {
+                console.info(`Skip building nsis7z target for ${platform}.`);
             }
             return;
         }
 
         const sourceArchive = await this.buildArchiveTarget('7z', sourceDir);
 
-        const versionInfo = new NsisVersionInfo(resolve(this.dir, config.output, 'versions.nsis.json'));
+        const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
 
-        const targetNsis = resolve(dirname(sourceDir), `${ basename(sourceDir) }.exe`);
+        const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const data = await (new Nsis7Zipper(sourceArchive, {
 
@@ -815,8 +847,8 @@ export class Builder {
             exeName: config.win.exeName,
             programGroupName: config.win.programGroupName,
 
-            theme: config.nsis.theme ? resolve(this.dir, config.nsis.theme) : undefined,
-            license: config.nsis.license ? resolve(this.dir, config.nsis.license) : undefined,
+            theme: config.nsis.theme ? path.resolve(this.dir, config.nsis.theme) : '',
+            license: config.nsis.license ? path.resolve(this.dir, config.nsis.license) : '',
             web: config.nsis.web,
 
             // Compression.
@@ -838,21 +870,21 @@ export class Builder {
         })).make();
 
         const script = await tmpName();
-        await writeFile(script, data);
+        await fs.writeFile(script, data);
 
         await nsisBuild(sourceDir, script, {
-            mute: this.options.mute,
+            mute: !!this.options.mute,
         });
 
-        if(config.nsis && !config.nsis.scriptFile) await remove(script);
+        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
 
-        if(config.nsis.diffUpdaters) {
+        if (config.nsis.diffUpdaters) {
 
-            for(const version of await versionInfo.getVersions()) {
-                if(semver.gt(pkg.version, version)) {
+            for (const version of await versionInfo.getVersions()) {
+                if (semver.gt(pkg.version, version)) {
                     await this.buildNsisDiffUpdater(platform, arch, versionInfo, version, pkg.version, pkg, config);
                 }
             }
@@ -865,9 +897,9 @@ export class Builder {
 
     protected async buildTask(platform: string, arch: string, pkg: any, config: BuildConfig) {
 
-        if(platform === 'mac' && arch === 'x86' && !config.nwVersion.includes('0.12.3')) {
-            if(!this.options.mute) {
-                console.info(`The NW.js binary for ${ platform }, ${ arch } isn't available for ${ config.nwVersion }, skipped.`);
+        if (platform === 'mac' && arch === 'x86' && !config.nwVersion.includes('0.12.3')) {
+            if (!this.options.mute) {
+                console.info(`The NW.js binary for ${platform}, ${arch} isn't available for ${config.nwVersion}, skipped.`);
             }
             throw new Error('ERROR_TASK_MAC_X86_SKIPPED');
         }
@@ -878,12 +910,12 @@ export class Builder {
             flavor: config.nwFlavor,
             mirror: this.options.mirror,
             useCaches: true,
-            showProgress: this.options.mute ? false : true,
+            showProgress: !this.options.mute,
             forceCaches: this.options.forceCaches,
             destination: this.options.destination,
         });
 
-        if(!this.options.mute) {
+        if (!this.options.mute) {
             console.info('Fetching NW.js binary...', {
                 platform: downloader.options.platform,
                 arch: downloader.options.arch,
@@ -894,81 +926,81 @@ export class Builder {
 
         const runtimeDir = await downloader.fetchAndExtract();
 
-        if(!this.options.mute) {
+        if (!this.options.mute) {
             console.info('Building targets...');
         }
 
         const started = Date.now();
 
-        if(!this.options.mute) {
+        if (!this.options.mute) {
             console.info(`Building directory target starts...`);
         }
 
         const targetDir = await this.buildDirTarget(platform, arch, runtimeDir, pkg, config);
 
-        if(!this.options.mute) {
-            console.info(`Building directory target ends within ${ this.getTimeDiff(started) }s.`);
+        if (!this.options.mute) {
+            console.info(`Building directory target ends within ${this.getTimeDiff(started)}s.`);
         }
 
         /*******************************************
-        // Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우
-        // 권한 문제가 발생한다.
+         // Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우
+         // 권한 문제가 발생한다.
 
-        // 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
-        // nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
-        // 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
+         // 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
+         // nwJS 실행파일 리소스를 권한이 필요없는 폴더로 복사하여 실행 한다.
+         // 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
 
-        // Original nwJS App 파일 목록
-        console.info(`\n* Dir: ${ targetDir }`);
+         // Original nwJS App 파일 목록
+         console.info(`\n* Dir: ${ targetDir }`);
 
-        if(config.childApp.dest) {
-            config.nwFiles = await globby(['*'], {
-                cwd: targetDir,
-                follow: true,
-                mark: true,
-                ignore: config.childApp.excludes,
-            });
-            console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
-        }
+         if(config.childApp.dest) {
+         config.nwFiles = await globby(['*'], {
+         cwd: targetDir,
+         follow: true,
+         mark: true,
+         ignore: config.childApp.excludes,
+         });
+         console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
+         }
 
-        //*******************************************/
+         //*******************************************/
 
-        // TODO: Consider using `Bluebird.map` to enable concurrent target building.
-        for(const target of config.targets) {
+        // TODO: Consider using `map` to enable concurrent target building.
+        for (const target of config.targets) {
 
             const started = Date.now();
 
-            switch(target) {
-            case 'zip':
-            case '7z':
-                if(!this.options.mute) {
-                    console.info(`Building ${ target } archive target starts...`);
-                }
-                await this.buildArchiveTarget(target, targetDir);
-                if(!this.options.mute) {
-                    console.info(`Building ${ target } archive target ends within ${ this.getTimeDiff(started) }s.`);
-                }
-                break;
-            case 'nsis':
-                if(!this.options.mute) {
-                    console.info(`Building nsis target starts...`);
-                }
-                await this.buildNsisTarget(platform, arch, targetDir, pkg, config);
-                if(!this.options.mute) {
-                    console.info(`Building nsis target ends within ${ this.getTimeDiff(started) }s.`);
-                }
-                break;
-            case 'nsis7z':
-                if(!this.options.mute) {
-                    console.info(`Building nsis7z target starts...`);
-                }
-                await this.buildNsis7zTarget(platform, arch, targetDir, pkg, config);
-                if(!this.options.mute) {
-                    console.info(`Building nsis7z target ends within ${ this.getTimeDiff(started) }s.`);
-                }
-                break;
-            default:
-                throw new Error('ERROR_UNKNOWN_TARGET');
+            switch (target) {
+                case 'zip':
+                case '7z':
+                    if (!this.options.mute) {
+                        console.info(`Building ${target} archive target starts...`);
+                    }
+                    await this.buildArchiveTarget(target, targetDir);
+                    if (!this.options.mute) {
+                        console.info(`Building ${target} archive target ends within ${this.getTimeDiff(started)}s.`);
+                    }
+                    break;
+                case 'nsis':
+                    if (!this.options.mute) {
+                        console.info(`Building nsis target starts...`);
+                    }
+                    await this.buildNsisTarget(platform, arch, targetDir, pkg, config);
+                    if (!this.options.mute) {
+                        console.info(`Building nsis target ends within ${this.getTimeDiff(started)}s.`);
+                    }
+                    break;
+                case 'nsis7z':
+                    if (!this.options.mute) {
+                        console.info(`Building nsis7z target starts...`);
+                    }
+                    await this.buildNsis7zTarget(platform, arch, targetDir, pkg, config);
+                    if (!this.options.mute) {
+                        console.info(`Building nsis7z target ends within ${this.getTimeDiff(started)}s.`);
+                    }
+                    break;
+                default:
+                    throw new Error('ERROR_UNKNOWN_TARGET');
             }
 
         }

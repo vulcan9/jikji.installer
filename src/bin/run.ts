@@ -1,38 +1,39 @@
 #!/usr/bin/env node
 
-import * as yargs from 'yargs';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
-const debug = require('debug')('build:commandline:run');
-
+import createDebug from 'debug';
 import { Runner } from '../lib';
 
-const argv = require('yargs')
-.option('x86', {
-    type: 'boolean',
-    describe: 'Build for x86 arch',
-    default: Runner.DEFAULT_OPTIONS.x86,
-})
-.option('x64', {
-    type: 'boolean',
-    describe: 'Build for x64 arch',
-    default: Runner.DEFAULT_OPTIONS.x64,
-})
-.option('chrome-app', {
-    type: 'boolean',
-    describe: 'Build from Chrome App',
-    default: Runner.DEFAULT_OPTIONS.chromeApp,
-})
-.option('mirror', {
-    describe: 'Modify NW.js mirror',
-    default: Runner.DEFAULT_OPTIONS.mirror,
-})
-.option('detached', {
-    describe: 'Detach after launching',
-    type: 'boolean',
-    default: Runner.DEFAULT_OPTIONS.detached,
-})
-.help()
-.argv;
+const debug = createDebug('build:commandline:run');
+
+const argv = yargs(hideBin(process.argv))
+    .option('x86', {
+        type: 'boolean',
+        describe: 'Build for x86 arch',
+        default: Runner.DEFAULT_OPTIONS.x86,
+    })
+    .option('x64', {
+        type: 'boolean',
+        describe: 'Build for x64 arch',
+        default: Runner.DEFAULT_OPTIONS.x64,
+    })
+    .option('chrome-app', {
+        type: 'boolean',
+        describe: 'Build from Chrome App',
+        default: Runner.DEFAULT_OPTIONS.chromeApp,
+    })
+    .option('mirror', {
+        describe: 'Modify NW.js mirror',
+        default: Runner.DEFAULT_OPTIONS.mirror,
+    })
+    .option('detached', {
+        describe: 'Detach after launching',
+        type: 'boolean',
+        default: Runner.DEFAULT_OPTIONS.detached,
+    })
+    .help().parseSync();
 
 (async () => {
 
@@ -45,16 +46,14 @@ const argv = require('yargs')
         mirror: argv.mirror,
         detached: argv.detached,
         mute: false,
-    }, argv._);
+    }, argv._ as string[]);
 
-    const code = await runner.run();
-
-    process.exitCode = code;
+    process.exitCode = await runner.run();
 
 })()
-.catch((err) => {
+    .catch((err) => {
 
-    console.error(err);
-    process.exitCode = -1;
+        console.error(err);
+        process.exitCode = -1;
 
-});
+    });

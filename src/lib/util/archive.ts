@@ -1,12 +1,11 @@
-
-import { dirname, basename, join, resolve, normalize } from 'path';
-
-import { remove, writeFile } from 'fs-extra';
+import { basename, dirname, join, normalize, resolve } from 'path';
+import fs from 'fs-extra';
 import { path7za } from '7zip-bin';
 
-const debug = require('debug')('build:archive');
+import createDebug from 'debug';
+import { spawnAsync, tmpFile } from './';
 
-import { tmpFile, spawnAsync } from './';
+const debug = createDebug('build:archive');
 
 export interface IExtractOptions {
     overwrite: boolean;
@@ -19,19 +18,27 @@ async function extract(archive: string, dest: string = dirname(archive), options
     debug('in extract', 'archive', archive);
     debug('in extract', 'dest', dest);
 
-    const { code, signal } = await spawnAsync(path7za, [ 'x', '-y', `-ao${ options.overwrite ? 'a' : 's' }`, `-o${ resolve(dest) }`, resolve(archive) ]);
+    const {code, signal} = await spawnAsync(path7za, [
+        'x',
+        '-y',
+        `-ao${options.overwrite ? 'a' : 's'}`,
+        `-o${resolve(dest)}`,
+        resolve(archive)
+    ]);
 
-    if(code != 0) {
-        throw new Error(`ERROR_EXTRACTING path = ${ archive }`);
+    if (code !== 0) {
+        throw new Error(`ERROR_EXTRACTING path = ${archive}`);
     }
 
     return dest;
 
 }
 
-async function extractTarGz(archive: string, dest: string = dirname(archive), options: IExtractOptions = {
-    overwrite: false,
-}) {
+async function extractTarGz(
+    archive: string,
+    dest: string = dirname(archive),
+    options: IExtractOptions = {overwrite: false}
+) {
 
     const tar = join(dest, basename(archive.slice(0, -3)));
 
@@ -40,7 +47,7 @@ async function extractTarGz(archive: string, dest: string = dirname(archive), op
     });
     await extract(tar, dest);
 
-    await remove(tar);
+    await fs.remove(tar);
 
     return dest;
 
@@ -50,13 +57,11 @@ export async function extractGeneric(archive: string, dest: string = dirname(arc
     overwrite: false,
 }) {
 
-    if(archive.endsWith('.zip')) {
+    if (archive.endsWith('.zip')) {
         await extract(archive, dest, options);
-    }
-    else if(archive.endsWith('tar.gz')) {
+    } else if (archive.endsWith('tar.gz')) {
         await extractTarGz(archive, dest, options);
-    }
-    else {
+    } else {
         throw new Error('ERROR_UNKNOWN_EXTENSION');
     }
 
@@ -71,15 +76,20 @@ export async function compress(dir: string, files: string[], type: string, archi
     debug('in compress', 'type', type);
     debug('in compress', 'archive', archive);
 
-    const { path: listfiles } = await tmpFile({
+    const {path: listfiles} = await tmpFile({
         discardDescriptor: true,
     });
 
     debug('in compress', 'listfiles', listfiles);
 
-    await writeFile(listfiles, files.map(file => normalize(file)).join('\r\n'));
+    await fs.writeFile(listfiles, files.map(file => normalize(file)).join('\r\n'));
 
-    const { code, signal } = await spawnAsync(path7za, [ 'a', `-t${ type }`, resolve(archive), `@${ resolve(listfiles) }` ], {
+    const {code, signal} = await spawnAsync(path7za, [
+        'a',
+        `-t${type}`,
+        resolve(archive),
+        `@${resolve(listfiles)}`
+    ], {
         cwd: dir,
     });
 

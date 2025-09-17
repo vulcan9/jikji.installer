@@ -1,4 +1,3 @@
-
 export class WinConfig {
 
     public productName: string = '';
@@ -13,20 +12,20 @@ export class WinConfig {
         FileDescription?: undefined,
         LegalCopyright?: undefined,
     } = {};
-    public icon: string = undefined;
+    public icon: string = '';
 
-    public publisher: string = undefined;
-    public exeName: string = undefined;
-    public programGroupName: string = undefined;
+    public publisher: string = '';
+    public exeName: string = '';
+    public programGroupName: string = '';
 
     constructor(options: any = {}) {
 
         Object.keys(this).map((key) => {
-            if(options[key] !== undefined) {
-                switch(key) {
-                default:
-                    (<any>this)[key] = options[key];
-                    break;
+            if (options[key] !== undefined) {
+                switch (key) {
+                    default:
+                        (<any>this)[key] = options[key];
+                        break;
                 }
             }
         });

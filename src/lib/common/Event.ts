@@ -1,4 +1,3 @@
-
 export class Event<TArgs> {
 
     public listeners: Array<(args: TArgs) => void> = [];
@@ -16,7 +15,7 @@ export class Event<TArgs> {
     }
 
     public unsubscribe(fn: ((args: TArgs) => void)) {
-        this.listeners = this.listeners.filter(f => f != fn);
+        this.listeners = this.listeners.filter(f => f !== fn);
     }
 
 }

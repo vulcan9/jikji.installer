@@ -1,9 +1,7 @@
+import { join, resolve, win32 } from 'path';
+import dircompare from 'dir-compare';
 
-import { dirname, join, relative, resolve, win32 } from 'path';
-
-const dircompare = require('dir-compare');
-
-import { NsisComposer, INsisComposerOptions } from './NsisComposer';
+import { INsisComposerOptions, NsisComposer } from './NsisComposer';
 
 export class NsisDiffer extends NsisComposer {
 
@@ -21,18 +19,15 @@ export class NsisDiffer extends NsisComposer {
 
         const lines: string[] = [];
 
-        for(const diff of result.diffSet) {
+        for (const diff of result.diffSet) {
 
-            if(diff.type1 === 'missing' && diff.type2 === 'file') {
+            if (diff.type1 === 'missing' && diff.type2 === 'file') {
                 lines.push(await this.makeWriteFile(diff.path2, '.' + diff.relativePath, diff.name2));
-            }
-            else if(diff.type1 === 'file' && diff.type2 === 'missing') {
+            } else if (diff.type1 === 'file' && diff.type2 === 'missing') {
                 lines.push(await this.makeRemoveFile(diff.path1, '.' + diff.relativePath, diff.name1));
-            }
-            else if(diff.type1 === 'directory' && diff.type2 === 'missing') {
+            } else if (diff.type1 === 'directory' && diff.type2 === 'missing') {
                 lines.push(await this.makeRemoveDir(diff.path1, '.' + diff.relativePath, diff.name1));
-            }
-            else if(diff.type1 === 'file' && diff.type2 === 'file' && diff.state === 'distinct') {
+            } else if (diff.type1 === 'file' && diff.type2 === 'file' && diff.state === 'distinct') {
                 lines.push(await this.makeWriteFile(diff.path2, '.' + diff.relativePath, diff.name2));
             }
 
@@ -43,15 +38,15 @@ export class NsisDiffer extends NsisComposer {
     }
 
     protected async makeRemoveFile(rootDir: string, relativeDir: string, filename: string): Promise<string> {
-        return `Delete "$INSTDIR\\${ win32.normalize(join(relativeDir, filename)) }"`;
+        return `Delete "$INSTDIR\\${win32.normalize(join(relativeDir, filename))}"`;
     }
 
     protected async makeWriteFile(rootDir: string, relativeDir: string, filename: string): Promise<string> {
-        return `SetOutPath "$INSTDIR\\${ win32.normalize(relativeDir) }"File "${ win32.normalize(resolve(rootDir, filename)) }"`;
+        return `SetOutPath "$INSTDIR\\${win32.normalize(relativeDir)}"File "${win32.normalize(resolve(rootDir, filename))}"`;
     }
 
     protected async makeRemoveDir(rootDir: string, relativeDir: string, filename: string): Promise<string> {
-        return `RMDir /r "$INSTDIR\\${ win32.normalize(join(relativeDir, filename)) }"`;
+        return `RMDir /r "$INSTDIR\\${win32.normalize(join(relativeDir, filename))}"`;
     }
 
 }

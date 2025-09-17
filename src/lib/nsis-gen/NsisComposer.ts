@@ -6,44 +6,44 @@ import { fixWindowsVersion } from '../util';
 
 export interface INsisComposerOptions {
 
-	// Basic.
-	productName: string;
-	companyName: string;
-	description: string;
-	version: string;
-	copyright: string;
-	publisher?: string;
+    // Basic.
+    productName: string;
+    companyName: string;
+    description: string;
+    version: string;
+    copyright: string;
+    publisher?: string;
 
-	theme: string;
-	license: string;
-	web: string;
+    theme: string;
+    license: string;
+    web: string;
 
-	exeName: string;
-	programGroupName: string;
+    exeName: string;
+    programGroupName: string;
 
-	// Compression.
-	compression: 'zlib' | 'bzip2' | 'lzma';
-	solid: boolean;
+    // Compression.
+    compression: 'zlib' | 'bzip2' | 'lzma';
+    solid: boolean;
 
-	languages: string[];
-	installDirectory: string;
+    languages: string[];
+    installDirectory: string;
 
-	// Output.
-	output: string;
+    // Output.
+    output: string;
 
-	// 압축 파일 풀기 기능 지원
-	resource?: {src: string, dest: string}[]; // [{src: string, dest: string};]
-	uninstall?: string;
-	associate?: any[];
-	// App 복사 기능 지원
-	childApp?: {
-		name: string,
+    // 압축 파일 풀기 기능 지원
+    resource?: { src: string, dest: string }[]; // [{src: string, dest: string};]
+    uninstall?: string;
+    associate?: any[];
+    // App 복사 기능 지원
+    childApp?: {
+        name: string,
         excludes?: string[], moves: string[],
         dest: string,
         uninstallApp?: string
-	};
-	appName: string;
-	// nwFiles: string[];
+    };
+    appName: string;
+    // nwFiles: string[];
 }
 
 /***********************************************
@@ -55,66 +55,67 @@ export interface INsisComposerOptions {
 
 export class NsisComposer {
 
-	protected fixedVersion: string;
+    protected fixedVersion: string = '';
 
-	constructor(protected options: INsisComposerOptions) {
 
-		this.options.productName = this.options.productName || 'NO_PRODUCT_NAME';
-		this.options.companyName = this.options.companyName || 'NO_COMPANY_NAME';
-		this.options.description = this.options.description || 'NO_DESCRIPTION';
-		this.options.version = this.options.version || 'NO_PRODUCT_VERSION';
-		this.options.copyright = this.options.copyright || 'NO_COPYRIGHT';
-		this.options.publisher = this.options.publisher || 'NO_PUBLISH';
+    constructor(protected options: INsisComposerOptions) {
 
-		this.options.exeName = this.options.exeName || 'NO_FILE_NAME';
-		this.options.programGroupName = this.options.programGroupName || 'NO_PROGRAM_GROUP';
+        this.options.productName = this.options.productName || 'NO_PRODUCT_NAME';
+        this.options.companyName = this.options.companyName || 'NO_COMPANY_NAME';
+        this.options.description = this.options.description || 'NO_DESCRIPTION';
+        this.options.version = this.options.version || 'NO_PRODUCT_VERSION';
+        this.options.copyright = this.options.copyright || 'NO_COPYRIGHT';
+        this.options.publisher = this.options.publisher || 'NO_PUBLISH';
 
-		this.options.compression = this.options.compression || 'lzma';
-		this.options.solid = Boolean(this.options.solid);
-		this.options.languages = this.options.languages && this.options.languages.length > 0 ? this.options.languages : [ 'English' ];
+        this.options.exeName = this.options.exeName || 'NO_FILE_NAME';
+        this.options.programGroupName = this.options.programGroupName || 'NO_PROGRAM_GROUP';
 
-		this.fixedVersion = fixWindowsVersion(this.options.version);
+        this.options.compression = this.options.compression || 'lzma';
+        this.options.solid = Boolean(this.options.solid);
+        this.options.languages = this.options.languages && this.options.languages.length > 0 ? this.options.languages : ['English'];
 
-		if(this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
+        this.fixedVersion = fixWindowsVersion(this.options.version);
 
-		// process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
-	}
+        if (this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
 
-	public async make(): Promise<string> {
+        // process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
+    }
 
-		/*
-		; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
-		; $APPDATA (current:AppData/Roaming, all:ProgramData)
-		; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
+    public async make(): Promise<string> {
 
-		;디버깅
-		;MessageBox MB_OK "${OTHER_UNINSTALL_DEST}"
-		*/
-		return `
+        /*
+        ; SetShellVarContext (기본값 current) 따라 변하는 폴더 위치
+        ; $APPDATA (current:AppData/Roaming, all:ProgramData)
+        ; $LOCALAPPDATA (current: AppData/Local, all:ProgramData)
+
+        ;디버깅
+        ;MessageBox MB_OK "${OTHER_UNINSTALL_DEST}"
+        */
+        return `
 
 ;####################################################################################################################
 ; define Settings
 ;####################################################################################################################
 
 # setup 파일 경로
-!define OUTFILE_NAME              "${ win32.normalize(resolve(this.options.output)) }"
+!define OUTFILE_NAME              "${win32.normalize(resolve(this.options.output))}"
 
 ; nw 실행시 생성되는 chrome app 폴더 경로
-!define CHROME_APP_LAUNCHER       "${ this.options.appName }"
+!define CHROME_APP_LAUNCHER       "${this.options.appName}"
 
 ;----------------------------------------------------------
 ; 배포 프로그램 이름, 버전 및 기타 변수
 ;----------------------------------------------------------
-!define PRODUCT_NAME              "${ this.options.productName }"
-!define PRODUCT_VERSION           "${ this.options.version }"
-!define PRODUCT_PUBLISHER         "${ this.options.publisher }"
-!define PRODUCT_COMPANY           "${ this.options.companyName }"
-!define PRODUCT_WEBSITE           "${ this.options.web }"
+!define PRODUCT_NAME              "${this.options.productName}"
+!define PRODUCT_VERSION           "${this.options.version}"
+!define PRODUCT_PUBLISHER         "${this.options.publisher}"
+!define PRODUCT_COMPANY           "${this.options.companyName}"
+!define PRODUCT_WEBSITE           "${this.options.web}"
 
 !define EXE_FILE_DIR             "$PROGRAMFILES\\\${PRODUCT_COMPANY}\\\${PRODUCT_NAME}"
-!define EXE_FILE_NAME             "${ this.options.exeName }"
-!define EXE_FILE_FULL_NAME        "${ this.options.exeName }.exe"
-!define PROGRAM_GROUP_NAME        "${ this.options.programGroupName }"               ; 프로그램 그룹 이름
+!define EXE_FILE_NAME             "${this.options.exeName}"
+!define EXE_FILE_FULL_NAME        "${this.options.exeName}.exe"
+!define PROGRAM_GROUP_NAME        "${this.options.programGroupName}"               ; 프로그램 그룹 이름
 !define UNINSTALL_NAME            "uninstall.exe"                                    ; 언인스톨러 이름
 
 ;----------------------------------------------------------
@@ -136,15 +137,15 @@ export class NsisComposer {
 ; NSIS Settings
 ;##########################################################
 
-${ await this.NSISSettings() }
+${await this.NSISSettings()}
 
 ;##########################################################
 ; MUI Settings
 ;##########################################################
 
-${ await this.MUISettings() }
+${await this.MUISettings()}
 
-${ await this.MUIPages() }
+${await this.MUIPages()}
 
 ;----------------------------------------------------------
 ; Language Files
@@ -197,24 +198,24 @@ $\\r$\\n$\\r$\\n\${PRODUCT_NAME} 프로그램 종료 후 다시 시도 바랍니
 ; 기능 정의
 ;##########################################################
 
-${ await this.checkAndCloseApp() }
+${await this.checkAndCloseApp()}
 
-${ await this.fileAssociation() }
+${await this.fileAssociation()}
 
 ;##########################################################
 ; 인스톨
 ;##########################################################
 
-${ await this.prevUninstall() }
+${await this.prevUninstall()}
 
 ;----------------------------------------------------------
 ; 파일 설치, 제거
 ;----------------------------------------------------------
 
-${ await this.installAppLauncher() }
-${ await this.installResource() }
-${ await this.installChildApp() }
-${ await this.childAppProcess() }
+${await this.installAppLauncher()}
+${await this.installResource()}
+${await this.installChildApp()}
+${await this.childAppProcess()}
 
 ;----------------------------------------------------------
 # 설치 : 기본 파일 복사
@@ -280,11 +281,11 @@ SectionEnd
 ; 설치 (기타)
 ;##########################################################
 
-${ await this.createProgramGroup() }
+${await this.createProgramGroup()}
 
-${ await this.createDesktopIcon() }
+${await this.createDesktopIcon()}
 
-${ await this.createQuickIcon() }
+${await this.createQuickIcon()}
 
 ;##########################################################
 ; 언인스톨
@@ -317,8 +318,8 @@ Section Uninstall
     DeleteRegKey \${REG_ROOT_KEY} "\${REG_APPDIR_KEY}"
     DeleteRegKey \${REG_UNROOT_KEY} "\${REG_UNINST_KEY}"
 
-    ${ await this.deleteIcons() }
-    ${ await this.deleteProgramGroup() }
+    ${await this.deleteIcons()}
+    ${await this.deleteProgramGroup()}
 
     Call un.FileAssociate
 SectionEnd
@@ -362,7 +363,7 @@ FunctionEnd
 Unicode                     true
 SetCompress                 off                                     ; 압축 여부(auto|force|off) ( off 로 놓으면 테스트 하기 편하다 )
 #SetCompressor              lzma                                    ; 압축방식 (zlib|bzip2|lzma)
-SetCompressor               ${ this.options.solid ? '/SOLID' : '' } ${ this.options.compression }
+SetCompressor               ${this.options.solid ? '/SOLID' : ''} ${this.options.compression}
 
 ShowInstDetails             hide                                      ; 설치내용 자세히 보기 여부(hide|show|nevershow)
 ShowUninstDetails           hide                                      ; 언인스톨 자세히 보기 여부(hide|show|nevershow)
@@ -421,7 +422,7 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 ;##########################################################
 
 #!define MUI_THEME                           "\${NSISDIR}\\Contrib\\Graphics"
-!define MUI_THEME                             "${ this.options.theme ? win32.normalize(resolve(this.options.theme)) : '\${NSISDIR}\\theme'}"
+!define MUI_THEME                             "${this.options.theme ? win32.normalize(resolve(this.options.theme)) : '\${NSISDIR}\\theme'}"
 
 !define MUI_INSTFILESPAGE_PROGRESSBAR colored                    ; Default: smooth ("" | colored | smooth)
 !define MUI_INSTALLCOLORS                     "203864 bdc4d1"    ; 설치 화면 글자/배경색 지정
@@ -464,7 +465,7 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 ; Installer page
 ;----------------------------------------------------------
 !insertmacro MUI_PAGE_WELCOME                            ; 시작 환영 페이지
-!insertmacro MUI_PAGE_LICENSE "${ this.options.license ? win32.normalize(resolve(this.options.license)) : ''}"
+!insertmacro MUI_PAGE_LICENSE "${this.options.license ? win32.normalize(resolve(this.options.license)) : ''}"
 !insertmacro MUI_PAGE_COMPONENTS                         ; 컴포넌트 선택
 !insertmacro MUI_PAGE_DIRECTORY                          ; 디렉토리 선택
 !insertmacro MUI_PAGE_INSTFILES                          ; 설치중
@@ -658,12 +659,12 @@ SectionEnd
         //     excludes = excludes.concat(childApp.moves || []);
         // }
 
-        if(this.options.resource) {
+        if (this.options.resource) {
             excludes = excludes.concat(this.options.resource.map(p => p.src));
         }
 
         // 제외 목록
-        const excludesList = excludes.map(p => `/x "${ win32.normalize(p) }"`).join(' ');
+        const excludesList = excludes.map(p => `/x "${win32.normalize(p)}"`).join(' ');
         // excludesList = ('/x "' + this.options.resource.src + '"');
 
         return `
@@ -679,7 +680,7 @@ SectionEnd
 !macro Install_App_Launcher
     SetOutPath "$INSTDIR"
     ;File /nonfatal /a /r .\\*.*
-    File /nonfatal /a /r ${ excludesList } .\\*.*
+    File /nonfatal /a /r ${excludesList} .\\*.*
 !macroend
 
 Function un.Install_App_Launcher
@@ -709,7 +710,7 @@ FunctionEnd
 
     protected async installChildApp(): Promise<string> {
         const childApp = this.options.childApp;
-        if(!childApp || !childApp.dest) {
+        if (!childApp || !childApp.dest) {
             return `
 !macro Install_App_Child
 !macroend
@@ -735,10 +736,10 @@ FunctionEnd
                 const src = win32.normalize((p));
                 const dest = win32.normalize((childApp.dest + '/' + p));
                 return `
-        ;MessageBox MB_OK "moves 목록: $INSTDIR\\${ src }"
-        ;File /nonfatal /a /r "${ src }"
-        ;CopyFiles /SILENT "$INSTDIR\\${ src }\\*.*" "${ dest }"
-        Rename "$INSTDIR\\${ src }" "${ dest }"
+        ;MessageBox MB_OK "moves 목록: $INSTDIR\\${src}"
+        ;File /nonfatal /a /r "${src}"
+        ;CopyFiles /SILENT "$INSTDIR\\${src}\\*.*" "${dest}"
+        Rename "$INSTDIR\\${src}" "${dest}"
             `;
             }).join('');
         })();
@@ -748,7 +749,7 @@ FunctionEnd
             return list.map(p => {
                 // 폴더는 '\*.*' 붙여줌
                 // const path = (p.includes('.')) ? p : `${p}/*.*`;
-                return `/x "${ win32.normalize(p) }"`;
+                return `/x "${win32.normalize(p)}"`;
             }).join(' ');
         })();
 
@@ -756,7 +757,7 @@ FunctionEnd
         const DELETE_LIST = (() => {
             return excludes.map(p => {
                 const path = win32.normalize(chromeAppDest + '/' + p);
-                return (p.includes('.') ? 'Delete' : 'RMDir') + ` "${ path }"\n`;
+                return (p.includes('.') ? 'Delete' : 'RMDir') + ` "${path}"\n`;
             }).join(' ');
         })();
 
@@ -769,10 +770,10 @@ FunctionEnd
 ; Child App 복사
 ;----------------------------
 
-!define CHROME_APP_CHILD            "${ chromeAppName }"
+!define CHROME_APP_CHILD            "${chromeAppName}"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define CHILD_APP_DEST              "${ chromeAppDest }"
+!define CHILD_APP_DEST              "${chromeAppDest}"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -789,7 +790,7 @@ FunctionEnd
         
         # moves 목록 따로 처리
         # File /nonfatal /a /r "uninstall"
-        ${ MOVE_LIST }
+        ${MOVE_LIST}
         
         # child uninstall App 프로세스가 완전히 종료되지 않아 파일을 사용중이라 
         # 삭제 및 덮어쓰기가 불가한 상태였음 - 에러 발생함
@@ -806,17 +807,17 @@ FunctionEnd
         File /nonfatal /a ${EXCLUDE_LIST} .\\*.*
         
         # chrome app 리소스 따로 복사해 줘야함
-        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${ chromeAppDest }"
-        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${ chromeAppDest }\\locales"
-        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${ chromeAppDest }\\swiftshader"
+        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${chromeAppDest}"
+        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${chromeAppDest}\\locales"
+        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${chromeAppDest}\\swiftshader"
         
         /*
         # 방법 2: nwJS 설치 (installer 파일 그대로 사용)
         # resource로 정의된 리스트는 $INSTDIR 폴더에서 제외됨
         # moves 목록은 이미 실행됬으므로 전체 폴더를 카피해도 됨 (chrome app만 남아있음)
-        CopyFiles /SILENT "$INSTDIR\\*.*" "${ chromeAppDest }"
+        CopyFiles /SILENT "$INSTDIR\\*.*" "${chromeAppDest}"
         # 제외 목록 삭제
-        ${ DELETE_LIST }
+        ${DELETE_LIST}
         */
         
     skipChildApp:
@@ -849,9 +850,9 @@ Function un.Install_Resource
 FunctionEnd
         `;
 
-        const resource: {src: string, dest: string}[] = this.options.resource;
+        const resource: { src: string, dest: string }[] = this.options.resource || [];
         const otherUninstall = this.options.uninstall ? win32.normalize(this.options.uninstall) : '';
-        if(!resource && !otherUninstall) return empty;
+        if (!resource && !otherUninstall) return empty;
 
         // const resourceSrc = resource.src ? win32.normalize(resource.src) : '';
         // const resourceDest = resource.dest ? win32.normalize(resource.dest) : '';
@@ -871,13 +872,13 @@ FunctionEnd
         !macroend
         */
         const ADD_LIST = resource.map((obj) => {
-            if(!obj.src || !obj.dest) return '';
+            if (!obj.src || !obj.dest) return '';
             const src = win32.normalize(obj.src);
             const dest = win32.normalize(obj.dest);
             return `
-    RMDir /r                  "${ dest }"
-    SetOutPath                "${ dest }"
-    File /nonfatal /a /r      "${ src }\\*"
+    RMDir /r                  "${dest}"
+    SetOutPath                "${dest}"
+    File /nonfatal /a /r      "${src}\\*"
                 `;
         }).join('\n\n');
 
@@ -892,7 +893,7 @@ FunctionEnd
         FunctionEnd
         */
         const REMOVE_LIST = resource.map((obj) => {
-            if(!obj.src || !obj.dest) return '';
+            if (!obj.src || !obj.dest) return '';
             // const src = win32.normalize(obj.src);
             const dest = win32.normalize(obj.dest);
             return `
@@ -907,15 +908,15 @@ FunctionEnd
 ;----------------------------
 
 # 압축 파일 extract 정보 
-!define OTHER_UNINSTALL_DEST         "${ otherUninstall }"
+!define OTHER_UNINSTALL_DEST         "${otherUninstall}"
 
 !macro Install_Resource
-    ${ ADD_LIST }
+    ${ADD_LIST}
 !macroend
 
 ; 버전별 리소스 폴더 삭제
 Function un.Install_Resource
-    ${ REMOVE_LIST }
+    ${REMOVE_LIST}
     
     skipDest:
         ; 추가로 지정한 폴더 지우기
@@ -964,7 +965,7 @@ FunctionEnd
 Function CheckAndCloseApp
     # EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
     # $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
-    StrCpy $1 "${ exeFileFullName }"
+    StrCpy $1 "${exeFileFullName}"
         
     loop:
         nsProcess::_FindProcess "$1"
@@ -995,7 +996,7 @@ FunctionEnd
 Function un.CheckAndCloseApp
     # EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
     # $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
-    StrCpy $1 "${ exeFileFullName }"
+    StrCpy $1 "${exeFileFullName}"
         
     loop:
         nsProcess::_FindProcess "$1"
@@ -1032,7 +1033,7 @@ FunctionEnd
     */
     protected async fileAssociation(): Promise<string> {
         const associate = this.options.associate;
-        if(!associate || associate.length < 1) {
+        if (!associate || associate.length < 1) {
             return `
 Function FileAssociate
 FunctionEnd
@@ -1044,7 +1045,7 @@ FunctionEnd
         // associate: [{ext, fileClass, description, icon}]
         const exePath = '$INSTDIR\\\${EXE_FILE_FULL_NAME}';
         const APP_ASSOCIATE = associate.map((info) => {
-            if(!info.ext) return '';
+            if (!info.ext) return '';
 
             const ext = info.ext;
             const fileClass = info.fileClass || ('Ext.' + ext);
@@ -1070,7 +1071,7 @@ FunctionEnd
         }).join('\n\t');
 
         const APP_UNASSOCIATE = associate.map((info) => {
-            if(!info.ext) return '';
+            if (!info.ext) return '';
             const ext = info.ext;
             const fileClass = info.fileClass || ('Ext.' + ext);
 
@@ -1092,14 +1093,14 @@ FunctionEnd
 !include "FileAssociation.nsh"
 
 Function FileAssociate
-    ${ APP_ASSOCIATE }
+    ${APP_ASSOCIATE}
     
     ; explorer 갱신
     !insertmacro UPDATEFILEASSOC
 FunctionEnd
 
 Function un.FileAssociate
-    ${ APP_UNASSOCIATE }
+    ${APP_UNASSOCIATE}
     
     ; explorer 갱신
     !insertmacro UPDATEFILEASSOC
@@ -1123,7 +1124,7 @@ FunctionEnd
     */
     protected async childAppProcess(): Promise<string> {
         const childApp = this.options.childApp;
-        if(!childApp || !childApp.dest) {
+        if (!childApp || !childApp.dest) {
             return `
 !macro ChildAppProcess
 !macroend
@@ -1166,7 +1167,7 @@ Function un.ChildAppProcess
     ####################################
 
     Var /GLOBAL chromiumUninstallApp
-    StrCpy $chromiumUninstallApp "${ win32.normalize(chromiumUninstallApp) }"
+    StrCpy $chromiumUninstallApp "${win32.normalize(chromiumUninstallApp)}"
         
     StrCmp $chromiumUninstallApp "" skipChildProcess
         
