@@ -1,9 +1,9 @@
 import { normalize } from 'path';
 
-import { WinConfig } from './WinConfig';
-import { MacConfig } from './MacConfig';
-import { LinuxConfig } from './LinuxConfig';
-import { NsisConfig } from './NsisConfig';
+import { WinConfig } from './WinConfig.js';
+import { MacConfig } from './MacConfig.js';
+import { LinuxConfig } from './LinuxConfig.js';
+import { NsisConfig } from './NsisConfig.js';
 
 export class BuildConfig {
 

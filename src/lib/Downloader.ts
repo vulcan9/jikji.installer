@@ -1,7 +1,7 @@
 import path from 'path';
 import createDebug from 'debug';
-import { DownloaderBase } from './common';
-import { mergeOptions } from './util';
+import { DownloaderBase } from './common/index.js';
+import { mergeOptions } from './util/index.js';
 
 const debug = createDebug('build:downloader');
 
@@ -60,7 +60,8 @@ export class Downloader extends DownloaderBase {
         const partArch = this.handleArch(arch!);
         const partExtension = this.extensionByPlatform(platform!);
 
-        const url = `${mirror}/${partVersion}/nwjs${partFlavor}-${partVersion}-${partPlatform}-${partArch}.${partExtension}`;
+        let url = `${mirror}/${partVersion}/nwjs${partFlavor}-${partVersion}-${partPlatform}-${partArch}.${partExtension}`;
+        url = this.normalizeUrl(url);
         const filename = path.basename(url);
         const pathStr = path.resolve(this.destination, filename);
 

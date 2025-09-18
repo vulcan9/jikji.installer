@@ -4,7 +4,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import createDebug from 'debug';
-import { Builder } from '../lib';
+import { Builder } from '../lib/index.js';
 
 const debug = createDebug('build:commandline:build');
 
@@ -64,6 +64,21 @@ const argv = yargs(hideBin(process.argv))
         type: 'boolean',
         default: Builder.DEFAULT_OPTIONS.forceCaches
     })
+    .option('preserveSource', {
+        type: 'boolean',
+        describe: '압축 소스 폴더 보존',
+        default: Builder.DEFAULT_OPTIONS.preserveSource,
+    })
+    .option('preserveArchive', {
+        type: 'boolean',
+        describe: '압축 파일 보존',
+        default: Builder.DEFAULT_OPTIONS.preserveArchive,
+    })
+    .option('preserveScript', {
+        type: 'boolean',
+        describe: 'NSIS 스크립트 파일 보존',
+        default: Builder.DEFAULT_OPTIONS.preserveScript,
+    })
     .help().parseSync();
 
 (async () => {
@@ -81,7 +96,10 @@ const argv = yargs(hideBin(process.argv))
         mirror: argv.mirror,
         concurrent: argv.concurrent,
         mute: argv.mute,
-        forceCaches: argv.forceCaches
+        forceCaches: argv.forceCaches,
+        preserveSource: argv.preserveSource,
+        preserveArchive: argv.preserveArchive,
+        preserveScript: argv.preserveScript,
     }, argv._.shift()?.toString() ?? '');
 
     await builder.build();

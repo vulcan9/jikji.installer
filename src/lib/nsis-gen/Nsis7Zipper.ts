@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { INsisComposerOptions, NsisComposer } from './NsisComposer';
+import { INsisComposerOptions, NsisComposer } from './NsisComposer.js';
 
 export class Nsis7Zipper extends NsisComposer {
 

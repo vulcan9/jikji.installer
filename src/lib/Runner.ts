@@ -2,11 +2,11 @@ import path from 'path';
 import fs from 'fs-extra';
 import createDebug from 'debug';
 
-import { Downloader } from './Downloader';
-import { FFmpegDownloader } from './FFmpegDownloader';
-import { BuildConfig } from './config';
-import { findExecutable, findFFmpeg, mergeOptions, spawnAsync } from './util';
-import { DownloaderBase } from './common';
+import { Downloader } from './Downloader.js';
+import { FFmpegDownloader } from './FFmpegDownloader.js';
+import { BuildConfig } from './config/index.js';
+import { findExecutable, findFFmpeg, mergeOptions, spawnAsync } from './util/index.js';
+import { DownloaderBase } from './common/index.js';
 
 const debug = createDebug('build:runner');
 

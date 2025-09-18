@@ -5,9 +5,9 @@
         "sourceMap": true,
 
         "target": "ES2020",
-        "module": "ESNext",
+        "module": "NodeNext",
         // .js 확장자 붙은 import를 TS가 허용
-        "moduleResolution": "Node",
+        "moduleResolution": "NodeNext",
 
         "strict": true,
         "declaration": true,

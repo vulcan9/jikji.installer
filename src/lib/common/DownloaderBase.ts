@@ -1,19 +1,21 @@
 import path from 'path';
 import got from 'got';
-import progress from 'got';
 import ProgressBar from 'progress';
 import fs from 'fs-extra';
 import createDebug from 'debug';
 
-import { Event } from './Event';
-import { extractGeneric } from '../util';
+import { Event } from './Event.js';
+import { extractGeneric } from '../util/index.js';
+import { fileURLToPath } from 'node:url';
 
 const debug = createDebug('build:downloader');
 
-const DIR_CACHES = path.resolve(path.dirname(module.filename), '..', '..', '..', 'caches');
+const __filename = fileURLToPath(import.meta.url);
+const DIR_CACHES = path.resolve(path.dirname(__filename), '..', '..', '..', 'caches');
 fs.ensureDirSync(DIR_CACHES);
 
-export interface IRequestProgress {
+interface IRequestProgress {
+    /*
     percent: number;
     speed: number;
     size: {
@@ -24,6 +26,11 @@ export interface IRequestProgress {
         elapsed: number,
         remaining: number,
     };
+    */
+    percent: number;
+    transferred: number;
+    total: number;
+    speed: number;
 }
 
 export abstract class DownloaderBase {
@@ -105,18 +112,17 @@ export abstract class DownloaderBase {
         return stat.size;
     }
 
-    protected getRemoteSize(url: string): Promise<number> {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const res = await got.head(url, {
-                    followRedirect: true, // request의 followAllRedirects 대응
-                });
-                const len = parseInt(res.headers['content-length'] || '0', 10);
-                resolve(len);
-            } catch (err) {
-                reject(err);
-            }
-        });
+    protected async getRemoteSize(url: string): Promise<number> {
+        try {
+            const res = await got(url, {
+                method: 'HEAD',
+                followRedirect: true
+            });
+            const length = res.headers['content-length'];
+            return length ? parseInt(length, 10) : 0;
+        } catch (err) {
+            throw err;
+        }
     }
 
     protected async isFileExists(pathStr: string): Promise<boolean> {
@@ -135,16 +141,91 @@ export abstract class DownloaderBase {
 
     }
 
+    protected normalizeUrl(url: string): string {
+        return url.replace(/([^:]\/)\/+/g, '$1');
+    }
+
     protected async download(url: string, filename: string, pathStr: string, showProgress: boolean) {
+        let bar: ProgressBar | null = null;
+        url = this.normalizeUrl(url);
+
+        const onProgress = (percent: number, transferred: number, total: number, speed: number) => {
+            if (!total) return;
+            if (!bar) {
+                bar = new ProgressBar('[:bar] :speedKB/s :etas', {
+                    width: 50,
+                    total,
+                });
+                console.info('');
+            }
+
+            bar.update(percent, {
+                speed: (speed / 1000).toFixed(2),
+            });
+        };
+
+        if (showProgress) {
+            debug('in download', 'progress subscription added', filename);
+        }
+
+        debug('in download', 'start downloading', filename);
+
+        await new Promise<void>((resolve, reject) => {
+            const writeStream = fs.createWriteStream(pathStr);
+
+            let downloaded = 0;
+            let total = 0;
+            let startTime = Date.now();
+
+            console.info('[download]: ', url);
+            const stream = got.stream(url, {followRedirect: true});
+
+            stream.on('response', (res: any) => {
+                const len = res.headers['content-length'];
+                total = len ? parseInt(len, 10) : 0;
+            });
+
+            stream.on('data', (chunk: Buffer) => {
+                downloaded += chunk.length;
+                const elapsed = (Date.now() - startTime) / 1000; // seconds
+                const speed = elapsed > 0 ? downloaded / elapsed : 0;
+                if (showProgress && total > 0) {
+                    const percent = downloaded / total;
+                    onProgress(percent, downloaded, total, speed);
+                    this.onProgress.trigger({
+                        percent, transferred: downloaded, total, speed
+                    });
+                }
+            });
+
+            stream.on('error', reject);
+            writeStream.on('error', reject);
+
+            writeStream.on('finish', () => resolve());
+
+            stream.pipe(writeStream);
+        });
+
+        debug('in fetch', 'end downloading', filename);
+
+        if (showProgress) {
+            if (bar) {
+                console.info('');
+                (bar as ProgressBar).terminate();
+            }
+        }
+
+        return pathStr;
+    }
+
+    /*
+    protected async __download(url: string, filename: string, pathStr: string, showProgress: boolean) {
 
         let bar: ProgressBar | null = null;
 
         const onProgress = (state: IRequestProgress) => {
 
-            if (!state.size.total) {
-                return;
-            }
-
+            if (!state.size.total) return;
             if (!bar) {
                 bar = new ProgressBar('[:bar] :speedKB/s :etas', {
                     width: 50,
@@ -156,27 +237,23 @@ export abstract class DownloaderBase {
             bar.update(state.size.transferred / state.size.total, {
                 speed: (state.speed / 1000).toFixed(2),
             });
-
         };
 
-        if (showProgress) {
-            this.onProgress.subscribe(onProgress);
-        }
-
+        if (showProgress) this.onProgress.subscribe(onProgress);
         debug('in download', 'start downloading', filename);
 
         await new Promise((resolve, reject) => {
-            progress(got(url, {
-                encoding: null,
-            }, (err: any, res: { statusCode: number; }, data: string | NodeJS.ArrayBufferView) => {
+            progress(got(
+                url, {encoding: null},
+                (err: any, res: { statusCode: number; }, data: string | NodeJS.ArrayBufferView) => {
 
-                if (err) return reject(err);
-                if (res.statusCode !== 200) {
-                    const e = new Error(`ERROR_STATUS_CODE statusCode = ${res.statusCode}`);
-                    return reject(e);
-                }
-                fs.writeFile(pathStr, data, (err: any) => err ? reject(err) : resolve());
-            }))
+                    if (err) return reject(err);
+                    if (res.statusCode !== 200) {
+                        const e = new Error(`ERROR_STATUS_CODE statusCode = ${res.statusCode}`);
+                        return reject(e);
+                    }
+                    fs.writeFile(pathStr, data, (err: any) => err ? reject(err) : resolve());
+                }))
                 .on('progress', (state: IRequestProgress) => {
                     this.onProgress.trigger(state);
                 });
@@ -195,5 +272,6 @@ export abstract class DownloaderBase {
         return pathStr;
 
     }
+    */
 
 }

@@ -3,17 +3,16 @@ import path from 'path';
 import semver from 'semver';
 import fs from 'fs-extra';
 
-/* Bluebird removed: using native Promise */
 import createDebug from 'debug';
 import globby from 'globby';
 import rcedit from 'rcedit';
 import plist from 'plist';
 
-import { Downloader } from './Downloader';
-import { FFmpegDownloader } from './FFmpegDownloader';
-import { BuildConfig } from './config';
-import { DownloaderBase, NsisVersionInfo } from './common';
-import { Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen';
+import { Downloader } from './Downloader.js';
+import { FFmpegDownloader } from './FFmpegDownloader.js';
+import { BuildConfig } from './config/index.js';
+import { DownloaderBase, NsisVersionInfo } from './common/index.js';
+import { Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
 import {
     compress,
     copyFileAsync,
@@ -25,7 +24,7 @@ import {
     mergeOptions,
     tmpDir,
     tmpName
-} from './util';
+} from './util/index.js';
 
 const debug = createDebug('build:builder');
 
@@ -49,6 +48,9 @@ export interface IBuilderOptions {
     mute?: boolean;
     forceCaches?: boolean;
     destination?: string;
+    preserveSource?: boolean,
+    preserveArchive?: boolean,
+    preserveScript?: boolean,
 }
 
 export class Builder {
@@ -63,9 +65,15 @@ export class Builder {
         chromeApp: false,
         mirror: Downloader.DEFAULT_OPTIONS.mirror,
         concurrent: false,
-        mute: true,
+        mute: false,
         forceCaches: Downloader.DEFAULT_OPTIONS.forceCaches,
         destination: DownloaderBase.DEFAULT_DESTINATION,
+        // 압축 소스 폴더 보존
+        preserveSource: false,
+        // 압축 파일 보존
+        preserveArchive: false,
+        // true 이면 생성한 NSIS 스크립트 파일 삭제하지 않음
+        preserveScript: false,
     };
 
     public options: IBuilderOptions;
@@ -76,11 +84,9 @@ export class Builder {
 
         debug('in constructor', 'dir', dir);
         debug('in constructor', 'options', this.options);
-
     }
 
     public async build() {
-
         const tasks: string[][] = [];
 
         [
@@ -101,8 +107,7 @@ export class Builder {
             });
         });
 
-        for (const task of this.options.tasks ?? []) {
-
+        for (const task of <any>this.options.tasks) {
             const [platform, arch] = task.split('-');
 
             if ([
@@ -164,15 +169,15 @@ export class Builder {
 
         } else {
 
-            const pkg: any = await fs.readJson(path.resolve(this.dir, this.options.chromeApp ? 'manifest.json' : 'package.json'));
+            const configFile = path.resolve(this.dir, this.options.chromeApp ? 'manifest.json' : 'package.json');
+            const pkg: any = await fs.readJson(configFile);
             const config = new BuildConfig(pkg);
 
+            console.log('# BuildConfig: ', configFile);
             debug('in build', 'config', config);
 
             for (const [platform, arch] of tasks) {
-
                 const started = Date.now();
-
                 if (!this.options.mute) {
                     console.info(`Building for ${platform}, ${arch} starts...`);
                 }
@@ -182,15 +187,12 @@ export class Builder {
                 } catch (err) {
                     console.warn(err);
                 }
-
                 if (!this.options.mute) {
                     console.info(`Building for ${platform}, ${arch} ends within ${this.getTimeDiff(started)}s.`);
                 }
-
             }
 
         }
-
     }
 
     protected getTimeDiff(started: number) {
@@ -212,7 +214,6 @@ export class Builder {
         }
 
         await fs.writeFile(path, JSON.stringify(json));
-
     }
 
     protected parseOutputPattern(pattern: string, options: IParseOutputPatternOptions, pkg: any, config: BuildConfig) {
@@ -231,7 +232,6 @@ export class Builder {
                     throw new Error('ERROR_KEY_UNKNOWN');
             }
         });
-
     }
 
     protected combineExecutable(executable: string, nwFile: string) {
@@ -244,11 +244,9 @@ export class Builder {
 
             nwStream.on('error', reject);
             stream.on('error', reject);
-
             stream.on('finish', resolve);
 
             nwStream.pipe(stream);
-
         });
     }
 
@@ -266,7 +264,6 @@ export class Builder {
         return new Promise((resolve, reject) => {
 
             const pathStr = path.resolve(targetDir, 'nw.exe');
-
             const rc = {
                 'product-version': fixWindowsVersion(config.win.productVersion),
                 'file-version': fixWindowsVersion(config.win.fileVersion),
@@ -279,27 +276,19 @@ export class Builder {
                 },
                 'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
             };
-
             rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
-
         });
     }
 
     protected async renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         const src = path.resolve(targetDir, 'nw.exe');
         const dest = path.resolve(targetDir, `${config.win.exeName}.exe`);
-
         return await fs.rename(src, dest);
-
     }
 
     protected async updatePlist(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         const pathStr = path.resolve(targetDir, './nwjs.app/Contents/Info.plist');
-
         const plistObj = await this.readPlist(pathStr);
-
         plistObj.CFBundleIdentifier = config.appId;
         plistObj.CFBundleName = config.mac.name;
         plistObj.CFBundleExecutable = config.mac.displayName;
@@ -312,9 +301,7 @@ export class Builder {
                 plistObj[key] = config.mac.plistStrings[key];
             }
         }
-
         await this.writePlist(pathStr, plistObj);
-
     }
 
     protected async updateHelperPlist(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -324,10 +311,9 @@ export class Builder {
 
         const helperPath = await this.findMacHelperApp(targetDir);
         const pathStr = path.resolve(helperPath, 'Contents/Info.plist');
-
-        const plistObj = await this.readPlist(pathStr);
         const bin = pkg.product_string + ' Helper';
 
+        const plistObj = await this.readPlist(pathStr);
         plistObj.CFBundleIdentifier = config.appId + '.helper';
         plistObj.CFBundleDisplayName = bin;
         plistObj.CFBundleExecutable = bin;
@@ -342,7 +328,6 @@ export class Builder {
                 // use the default
                 return;
             }
-
             await fs.copy(path.resolve(this.dir, iconPath), dest);
         };
 
@@ -357,15 +342,12 @@ export class Builder {
         });
 
         for (const file of files) {
-
             const pathStr = path.resolve(targetDir, file);
 
             // Different versions has different encodings for `InforPlist.strings`.
             // We determine encoding by evaluating bytes of `CF` here.
             const data = await fs.readFile(pathStr);
-            const encoding = data.indexOf(Buffer.from('43004600', 'hex')) >= 0
-                ? 'ucs2' : 'utf-8';
-
+            const encoding = data.indexOf(Buffer.from('43004600', 'hex')) >= 0 ? 'ucs2' : 'utf8';
             const strings = data.toString(encoding);
 
             const newStrings = strings.replace(/([A-Za-z]+)\s+=\s+"(.+?)";/g, (match: string, key: string, value: string) => {
@@ -386,9 +368,7 @@ export class Builder {
             });
 
             await fs.writeFile(pathStr, Buffer.from(newStrings, encoding));
-
         }
-
     }
 
     protected async renameMacApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -397,7 +377,6 @@ export class Builder {
         let dest = bin.replace(/nwjs$/, config.mac.displayName);
 
         await fs.rename(bin, dest);
-
         dest = app.replace(/nwjs\.app$/, `${config.mac.displayName}.app`);
 
         return await fs.rename(app, dest);
@@ -409,14 +388,11 @@ export class Builder {
         }
 
         const app = await this.findMacHelperApp(targetDir);
-
         const bin = path.resolve(app, './Contents/MacOS/nwjs Helper');
         let dest = bin.replace(/nwjs Helper$/, `${pkg.product_string} Helper`);
-
         await fs.rename(bin, dest);
 
         dest = app.replace(/nwjs Helper\.app$/, `${pkg.product_string} Helper.app`);
-
         return await fs.rename(app, dest);
     }
 
@@ -425,12 +401,10 @@ export class Builder {
             // this version doesn't support Helper app renaming.
             return false;
         }
-
         if (!pkg.product_string) {
             // we can't rename the Helper app as we don't have a new name.
             return false;
         }
-
         return true;
     }
 
@@ -448,45 +422,32 @@ export class Builder {
     }
 
     protected async fixLinuxMode(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         const pathStr = path.resolve(targetDir, 'nw');
-
         await fs.chmod(pathStr, 0o744);
-
     }
 
     protected async renameLinuxApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         const src = path.resolve(targetDir, 'nw');
         const dest = path.resolve(targetDir, `${pkg.name}`);
-
         return await fs.rename(src, dest);
-
     }
 
     protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         await this.updateWinResources(targetDir, appRoot, pkg, config);
-
     }
 
     protected async prepareMacBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         await this.updateHelperPlist(targetDir, appRoot, pkg, config);
         await this.updatePlist(targetDir, appRoot, pkg, config);
         await this.updateMacIcons(targetDir, appRoot, pkg, config);
         await this.fixMacMeta(targetDir, appRoot, pkg, config);
-
     }
 
     protected async prepareLinuxBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         await this.fixLinuxMode(targetDir, appRoot, pkg, config);
-
     }
 
     protected async copyFiles(platform: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-
         const generalExcludes = [
             '**/node_modules/.bin',
             '**/node_modules/*/{ example, examples, test, tests }',
@@ -530,12 +491,10 @@ export class Builder {
         debug('in copyFiles', 'files', files);
 
         if (config.packed) {
-
             switch (platform) {
                 case 'win32':
                 case 'win':
                 case 'linux':
-
                     const nwFile = await tmpName({
                         postfix: '.zip',
                     });
@@ -551,33 +510,25 @@ export class Builder {
                     await this.combineExecutable(executable, nwFile);
 
                     await fs.remove(nwFile);
-
                     break;
                 case 'darwin':
                 case 'osx':
                 case 'mac':
-
                     for (const file of files) {
                         await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
                     }
-
                     await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
-
                     break;
                 default:
                     throw new Error('ERROR_UNKNOWN_PLATFORM');
             }
 
         } else {
-
             for (const file of files) {
                 await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
             }
-
             await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
-
         }
-
     }
 
     protected async integrateFFmpeg(platform: string, arch: string, targetDir: string, pkg: any, config: BuildConfig) {
@@ -600,23 +551,18 @@ export class Builder {
         }
 
         const ffmpegDir = await downloader.fetchAndExtract();
-
         const src = await findFFmpeg(platform, ffmpegDir);
         const dest = await findFFmpeg(platform, targetDir);
-
         await fs.copy(src, dest);
-
     }
 
     protected async buildNsisDiffUpdater(platform: string, arch: string, versionInfo: NsisVersionInfo, fromVersion: string, toVersion: string, pkg: any, config: BuildConfig) {
 
         const diffNsis = path.resolve(this.dir, config.output, `${pkg.name}-${toVersion} (${platform} ${arch})-(update from ${fromVersion}).exe`);
-
         const fromDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
         const toDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
 
         const data = await (new NsisDiffer(fromDir, toDir, {
-
             // Basic.
             productName: config.win.productName,
             companyName: config.win.companyName,
@@ -656,11 +602,11 @@ export class Builder {
         await nsisBuild(toDir, script, {
             mute: !!this.options.mute,
         });
-
-        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
-
+        if (!this.options.preserveScript) {
+            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
+            await fs.remove(script);
+        }
         await versionInfo.addUpdater(toVersion, fromVersion, arch, diffNsis);
-
     }
 
     protected async buildDirTarget(platform: string, arch: string, runtimeDir: string, pkg: any, config: BuildConfig): Promise<string> {
@@ -687,19 +633,15 @@ export class Builder {
         })());
 
         await fs.emptyDir(targetDir);
-
         await fs.copy(runtimeRoot, targetDir, {
             //dereference: true,
         });
-
         if (config.ffmpegIntegration) {
             await this.integrateFFmpeg(platform, arch, targetDir, pkg, config);
         }
-
         await fs.ensureDir(appRoot);
 
         // Copy before refining might void the effort.
-
         switch (platform) {
             case 'win32':
             case 'win':
@@ -726,23 +668,19 @@ export class Builder {
         }
 
         return targetDir;
-
     }
 
     protected async buildArchiveTarget(type: string, sourceDir: string) {
 
         const targetArchive = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.${type}`);
-
         await fs.remove(targetArchive);
 
         const files = await globby(['**/*'], {
             cwd: sourceDir,
         });
-
         await compress(sourceDir, files, type, targetArchive);
 
         return targetArchive;
-
     }
 
     protected async buildNsisTarget(platform: string, arch: string, sourceDir: string, pkg: any, config: BuildConfig) {
@@ -755,9 +693,7 @@ export class Builder {
         }
 
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
-
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
-
         const data = await (new NsisComposer({
 
             // Basic.
@@ -800,23 +736,22 @@ export class Builder {
             mute: !!this.options.mute,
         });
 
-        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
-
+        if (!this.options.preserveScript) {
+            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
+            await fs.remove(script);
+        }
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
 
         if (config.nsis.diffUpdaters) {
-
             for (const version of await versionInfo.getVersions()) {
                 if (semver.gt(pkg.version, version)) {
                     await this.buildNsisDiffUpdater(platform, arch, versionInfo, version, pkg.version, pkg, config);
                 }
             }
-
         }
 
         await versionInfo.save();
-
     }
 
     protected async buildNsis7zTarget(platform: string, arch: string, sourceDir: string, pkg: any, config: BuildConfig) {
@@ -828,10 +763,11 @@ export class Builder {
             return;
         }
 
-        const sourceArchive = await this.buildArchiveTarget('7z', sourceDir);
-
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
-
+        // 압축파일 (경로)
+        // sourceDir : 압축 대상 폴더 경로
+        const sourceArchive = await this.buildArchiveTarget('7z', sourceDir);
+        // 인스톨 exe 파일 생성 경로
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const data = await (new Nsis7Zipper(sourceArchive, {
@@ -876,23 +812,24 @@ export class Builder {
             mute: !!this.options.mute,
         });
 
-        if (config.nsis && !config.nsis.scriptFile) await fs.remove(script);
+        if (!this.options.preserveScript) {
+            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
+            await fs.remove(script);
+        }
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
 
         if (config.nsis.diffUpdaters) {
-
             for (const version of await versionInfo.getVersions()) {
                 if (semver.gt(pkg.version, version)) {
                     await this.buildNsisDiffUpdater(platform, arch, versionInfo, version, pkg.version, pkg, config);
                 }
             }
-
         }
 
         await versionInfo.save();
-
+        return sourceArchive;
     }
 
     protected async buildTask(platform: string, arch: string, pkg: any, config: BuildConfig) {
@@ -925,22 +862,13 @@ export class Builder {
         }
 
         const runtimeDir = await downloader.fetchAndExtract();
-
-        if (!this.options.mute) {
-            console.info('Building targets...');
-        }
+        if (!this.options.mute) console.info('Building targets...');
 
         const started = Date.now();
+        if (!this.options.mute) console.info(`Building directory target starts...`);
 
-        if (!this.options.mute) {
-            console.info(`Building directory target starts...`);
-        }
-
-        const targetDir = await this.buildDirTarget(platform, arch, runtimeDir, pkg, config);
-
-        if (!this.options.mute) {
-            console.info(`Building directory target ends within ${this.getTimeDiff(started)}s.`);
-        }
+        const sourceDir = await this.buildDirTarget(platform, arch, runtimeDir, pkg, config);
+        if (!this.options.mute) console.info(`Building directory target ends within ${this.getTimeDiff(started)}s.`);
 
         /*******************************************
          // Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우
@@ -965,46 +893,36 @@ export class Builder {
 
          //*******************************************/
 
-        // TODO: Consider using `map` to enable concurrent target building.
+        let sourceArchive: string | undefined;
         for (const target of config.targets) {
-
             const started = Date.now();
 
+            if (!this.options.mute) console.info(`Building ${target} archive target starts...`);
             switch (target) {
                 case 'zip':
                 case '7z':
-                    if (!this.options.mute) {
-                        console.info(`Building ${target} archive target starts...`);
-                    }
-                    await this.buildArchiveTarget(target, targetDir);
-                    if (!this.options.mute) {
-                        console.info(`Building ${target} archive target ends within ${this.getTimeDiff(started)}s.`);
-                    }
+                    await this.buildArchiveTarget(target, sourceDir);
                     break;
                 case 'nsis':
-                    if (!this.options.mute) {
-                        console.info(`Building nsis target starts...`);
-                    }
-                    await this.buildNsisTarget(platform, arch, targetDir, pkg, config);
-                    if (!this.options.mute) {
-                        console.info(`Building nsis target ends within ${this.getTimeDiff(started)}s.`);
-                    }
+                    await this.buildNsisTarget(platform, arch, sourceDir, pkg, config);
                     break;
                 case 'nsis7z':
-                    if (!this.options.mute) {
-                        console.info(`Building nsis7z target starts...`);
-                    }
-                    await this.buildNsis7zTarget(platform, arch, targetDir, pkg, config);
-                    if (!this.options.mute) {
-                        console.info(`Building nsis7z target ends within ${this.getTimeDiff(started)}s.`);
-                    }
+                    sourceArchive = await this.buildNsis7zTarget(platform, arch, sourceDir, pkg, config);
                     break;
                 default:
                     throw new Error('ERROR_UNKNOWN_TARGET');
             }
-
+            if (!this.options.mute) console.info(`Building ${target} archive target ends within ${this.getTimeDiff(started)}s.`);
         }
 
+        if (sourceArchive && !this.options.preserveArchive) {
+            console.log('# 7z 파일 삭제 (--preserveArchive): ', sourceArchive);
+            await fs.remove(sourceArchive);
+        }
+        if (!this.options.preserveSource) {
+            console.log('# 소스 폴더 삭제 (--preserveSource): ', sourceDir);
+            await fs.remove(sourceDir);
+        }
     }
 
 }

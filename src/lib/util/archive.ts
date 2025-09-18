@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import { path7za } from '7zip-bin';
 
 import createDebug from 'debug';
-import { spawnAsync, tmpFile } from './';
+import { spawnAsync, tmpFile } from './index.js';
 
 const debug = createDebug('build:archive');
 
@@ -29,9 +29,7 @@ async function extract(archive: string, dest: string = dirname(archive), options
     if (code !== 0) {
         throw new Error(`ERROR_EXTRACTING path = ${archive}`);
     }
-
     return dest;
-
 }
 
 async function extractTarGz(

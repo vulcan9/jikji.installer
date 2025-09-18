@@ -1,11 +1,13 @@
 import path from 'path';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'node:url';
 
-export * from './NsisComposer';
-export * from './NsisDiffer';
-export * from './Nsis7Zipper';
+export * from './NsisComposer.js';
+export * from './NsisDiffer.js';
+export * from './Nsis7Zipper.js';
 
-const DIR_ASSETS = path.resolve(path.dirname(module.filename), '../../../assets/');
+const __filename = fileURLToPath(import.meta.url);
+const DIR_ASSETS = path.resolve(path.dirname(__filename), '../../../assets/');
 const DIR_NSIS = path.resolve(DIR_ASSETS, 'nsis-3.06.1');
 
 export interface INsisBuildOptions {

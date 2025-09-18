@@ -19,7 +19,7 @@
         "./lib": "./dist/lib/index.js"
     },
     "scripts": {
-        "build": "tsc --declaration && tsc-alias",
+        "build": "tsc --declaration",
         "//test": "npm run build && ava",
         "//coverage": "nyc ava",
         "//release": "npm test && standard-version",
@@ -74,7 +74,7 @@
         "semver": "7.5.2",
         "source-map-support": "^0.4.11",
         "tmp": "0.2.4",
-        "yargs": "^16.1.1"
+        "yargs": "^18.0.0"
     },
     "directories": {
         "doc": "docs",

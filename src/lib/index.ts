@@ -1,7 +1,6 @@
+import 'source-map-support/register.js';
 
-import 'source-map-support/register';
-
-export * from './Runner';
-export * from './Builder';
-export * from './Downloader';
-export { findExecutable } from './util';
+export * from './Runner.js';
+export * from './Builder.js';
+export * from './Downloader.js';
+export { findExecutable } from './util/index.js';

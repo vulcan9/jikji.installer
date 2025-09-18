@@ -9,7 +9,7 @@ tmp.setGracefulCleanup();
 
 const debug = createDebug('build:util');
 
-export * from './archive';
+export * from './archive.js';
 
 export function mergeOptions(defaults: any, options: any) {
 

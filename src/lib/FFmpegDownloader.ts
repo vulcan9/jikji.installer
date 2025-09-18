@@ -1,22 +1,9 @@
 import path from 'path';
 import createDebug from 'debug';
-import { DownloaderBase } from './common';
-import { mergeOptions } from './util';
+import { DownloaderBase } from './common/index.js';
+import { mergeOptions } from './util/index.js';
 
 const debug = createDebug('build:ffmpegDownloader');
-
-export interface IRequestProgress {
-    percent: number;
-    speed: number;
-    size: {
-        total: number,
-        transferred: number,
-    };
-    time: {
-        elapsed: number,
-        remaining: number,
-    };
-}
 
 export interface IFFmpegDownloaderOptions {
     platform?: string;
@@ -65,7 +52,8 @@ export class FFmpegDownloader extends DownloaderBase {
         const partPlatform = this.handlePlatform(platform!);
         const partArch = this.handleArch(arch!);
 
-        const url = `${mirror}/${partVersion}/${partVersion}-${partPlatform}-${partArch}.zip`;
+        let url = `${mirror}/${partVersion}/${partVersion}-${partPlatform}-${partArch}.zip`;
+        url = this.normalizeUrl(url);
         const filename = `ffmpeg-${path.basename(url)}`;
         const pathStr = path.resolve(this.destination, filename);
 

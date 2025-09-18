@@ -2,7 +2,7 @@
 
 import { resolve, win32 } from 'path';
 
-import { fixWindowsVersion } from '../util';
+import { fixWindowsVersion } from '../util/index.js';
 
 export interface INsisComposerOptions {
 
@@ -761,9 +761,10 @@ FunctionEnd
             }).join(' ');
         })();
 
-        console.error('# 리소스 이동: \n', MOVE_LIST);
-        console.error('# nwJS 설치: \n', EXCLUDE_LIST);
+        // console.error('# 리소스 이동: \n', MOVE_LIST);
+        // console.error('# nwJS 설치: \n', EXCLUDE_LIST);
         // console.error('# 삭제: \n', DELETE_LIST);
+        // console.error('\n');
 
         return `
 ;----------------------------

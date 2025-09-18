@@ -1,7 +1,7 @@
 import { join, resolve, win32 } from 'path';
 import dircompare from 'dir-compare';
 
-import { INsisComposerOptions, NsisComposer } from './NsisComposer';
+import { INsisComposerOptions, NsisComposer } from './NsisComposer.js';
 
 export class NsisDiffer extends NsisComposer {
 

@@ -4,7 +4,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import createDebug from 'debug';
-import { Runner } from '../lib';
+import { Runner } from '../lib/index.js';
 
 const debug = createDebug('build:commandline:run');
 
