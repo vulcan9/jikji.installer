@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.0",
+    "version": "1.18.2",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js",
@@ -20,14 +20,13 @@
     },
     "scripts": {
         "build": "tsc --declaration",
-        "//test": "npm run build && ava",
-        "//coverage": "nyc ava",
-        "//release": "npm test && standard-version",
-        "x_prepublish": "npm run build",
+        "배포": "배포할때 npm 로그인 필요함",
+        "prepublishOnly": "npm run build",
         "package": "npm publish --access=public",
         "lint": "eslint 'src/**/*.{ts,tsx,js,jsx}' --max-warnings=0",
         "lint:fix": "eslint 'src/**/*.{ts,tsx,js,jsx}' --fix",
-        "샘플 패키징 실행": "--------------------------------------------------------------",
+        "샘플 패키징 실행 방법": "assets/project를 IDE에서 열고 dependencies 설치 확인 후 npm run build 실행",
+        "샘플 패키징 실행 (수정 필요함)": "--------------------------------------------------------------",
         "sample": "npm run build && node sample.js --dir=./assets/project",
         "sampleRun": "npm run build && node sample.js --dir=./assets/project --run"
     },
@@ -76,8 +75,8 @@
         "tmp": "0.2.4",
         "yargs": "^18.0.0"
     },
-    "directories": {
-        "doc": "docs",
-        "test": "test"
-    }
+    "files": [
+        "dist",
+        "vender"
+    ]
 }

@@ -1,8 +1,9 @@
 /* tslint:disable:no-trailing-whitespace */
 
-import { resolve, win32 } from 'path';
+import { dirname, resolve, win32 } from 'path';
 
 import { fixWindowsVersion } from '../util/index.js';
+import { fileURLToPath } from 'node:url';
 
 export interface INsisComposerOptions {
 
@@ -27,6 +28,8 @@ export interface INsisComposerOptions {
 
     languages: string[];
     installDirectory: string;
+    // VC++ Redistributable 설치 체크 과정을 추가할지 여부
+    install_visualCpp: boolean;
 
     // Output.
     output: string;
@@ -50,6 +53,17 @@ export interface INsisComposerOptions {
 
  NSIS : https://nsis.sourceforge.io/Docs/
  https://gist.github.com/SeonHyungJo/18c68d71925f6ccadce6fc75750b7fe0
+
+ # : 프리프로세서 주석.
+ NSIS 컴파일러의 프리프로세서 단계에서 무시됨.
+ 보통 !define, !include 같은 ! 명령어와 같이 쓰일 때 문맥상 맞음.
+
+ ; : 일반 주석.
+ NSIS 실행 스크립트 단계에서 무시됨.
+ Section, Exec, File 같은 명령들과 함께 쓰일 때 문맥상 맞음.
+
+ ! : 프리프로세서(Preprocessor) 명령어. 컴파일 시점에 처리.
+ 최종 설치 실행 파일(setup.exe)이 만들어지기 전에 NSIS 컴파일러가 읽어서 처리
 
  ************************************************/
 
@@ -167,6 +181,7 @@ LangString TXT_SECTION_UNINSTALL            \${LANG_KOREAN}        "이전 버�
 LangString TXT_EXTRACTING                   \${LANG_KOREAN}        "설치하는 동안 잠시 기다려 주세요."
 LangString TXT_SECTION_COPY                 \${LANG_KOREAN}        "프로그램 설치"
 LangString TXT_SECTION_COPY_RESOURCE        \${LANG_KOREAN}        "구성 요소 설치"
+LangString TXT_SECTION_COPY_VISUAL_CPP      \${LANG_KOREAN}        "Visual C++ Redistributable 설치 확인"
 LangString TXT_SECTION_CREATEDESKTOPICON    \${LANG_KOREAN}        "바탕 화면에 단축 아이콘 생성"
 LangString TXT_SECTION_CREATEQUICKLAUNCH    \${LANG_KOREAN}        "빠른 실행 단축 아이콘 생성"
 LangString TXT_SECTION_CREATSTARTMENU       \${LANG_KOREAN}        "시작 메뉴 단축 아이콘 생성"
@@ -280,6 +295,8 @@ SectionEnd
 ;##########################################################
 ; 설치 (기타)
 ;##########################################################
+
+${await this.install_Visual_Cpp_Redistributable()}
 
 ${await this.createProgramGroup()}
 
@@ -919,7 +936,7 @@ FunctionEnd
 Function un.Install_Resource
     ${REMOVE_LIST}
     
-    skipDest:
+    #skipDest:
         ; 추가로 지정한 폴더 지우기
         StrCmp "\${OTHER_UNINSTALL_DEST}" "" ok
             Delete      "\${OTHER_UNINSTALL_DEST}\\*.*"
@@ -930,6 +947,7 @@ Function un.Install_Resource
             RMDir /r         "\${OTHER_UNINSTALL_DEST}"
             RMDir /REBOOTOK  "\${OTHER_UNINSTALL_DEST}"
     ok:
+    
 FunctionEnd
         `;
     }
@@ -1239,6 +1257,7 @@ FunctionEnd
     ; https://nsis.sourceforge.io/Inetc_plug-in
     ; 주의) /HEADER 옵션 : 하나의 변수만 지정할 수 있음
     */
+
     /*
     protected async callServer(): Promise<string> {
         return `
@@ -1274,6 +1293,126 @@ FunctionEnd
     }
     */
 
+    protected async install_Visual_Cpp_Redistributable(): Promise<string> {
+        if (!this.options.install_visualCpp) return '';
+
+        // VC++ Redistributable 설치 레지스트리 키
+        // 64bit OS, x64 런타임        : HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\\x64
+        // 64bit OS, x86 런타임 (WOW64): HKLM\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\\x86
+        // 32bit OS, x86 런타임        : HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\\x86
+        // Installed 값이 1이면 VC++ 런타임이 설치된 것
+
+        // const x64 = 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64';
+        // const x64File = 'vc_redist.x64.exe';
+        // const x86wow = 'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86';
+        const x86 = 'SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86';
+
+        // 인스톨러에 VC++ Redistributable 포함 (x86)
+        const __dirname = dirname(fileURLToPath(import.meta.url));
+        const DIR_VENDER = resolve(__dirname, '../../../vender/');
+        const x86File = 'VC_redist.x86.exe';
+        const x86FilePath = win32.normalize(resolve(DIR_VENDER, x86File));
+        console.log('x86FilePath: ', x86FilePath);
+
+        const dll = '$WINDIR\\SysWOW64\\VCRUNTIME140.dll';
+        return `
+;----------------------------------------------------------
+; Visual C++ Redistributable 설치 확인
+; - pdftocairo.exe 실행할 때 VCRUNTIME140.dll 필요
+; - pdftocairo가 x86 환경이 필요하므로 VC_redist.x86.exe을 설치함
+; - (무조건 x86 VC++ Redistributable 체크/설치)
+;----------------------------------------------------------
+
+RequestExecutionLevel admin
+!include "FileFunc.nsh"
+!include "x64.nsh"
+
+Var VCOK
+Var EXITCODE
+
+Section $(TXT_SECTION_COPY_VISUAL_CPP)
+
+    SetOutPath $INSTDIR 
+;MessageBox MB_OK "$INSTDIR"
+    
+    ;---------------------
+    ; VC++ Redistributable (x86) 설치 확인
+    ;---------------------
+    
+    ; 먼저 64bit OS에서 WOW6432Node (32bit view) 확인
+    ; SetRegView 32 를 사용하면 64-bit OS에서는 WOW6432Node를, 32-bit OS에서는 기본 경로를 조회합니다.
+    SetRegView 32
+    ReadRegDWORD $0 HKLM "${x86}" "Installed"
+    IntCmp $0 1 vc_installed vc_check_sys32 vc_check_sys32
+    
+; 테스트    
+;Goto vc_install
+        
+    vc_check_sys32:
+        IfFileExists "${dll}" vc_installed vc_not_installed
+        
+    vc_not_installed:
+        StrCpy $VCOK "0"
+        Goto vc_check_done
+        
+    vc_installed:
+        StrCpy $VCOK "1"
+        
+    vc_check_done:
+        ; 이후 레지스트리 뷰는 기본(64)로 복구
+        SetRegView 64
+
+    ; 이미 설치되어 있으면 건너뜀
+    StrCmp $VCOK "1" vc_done vc_install
+
+    ;---------------------
+    ; 설치 진행
+    ;---------------------
+    
+    vc_install:
+        ;인스톨러 생성 시, 지정한 파일을 NSIS 설치 패키지 안에 포함시킴
+        ;설치 과정에서 $INSTDIR\\${x86FilePath} 경로에 풀려 있게 됩
+        File "${x86FilePath}"
+        
+        DetailPrint "VC++ Redistributable (x86) not found. Installing..."
+        ExecWait '"$INSTDIR\\${x86File}" /quiet /norestart' $EXITCODE
+        StrCmp $EXITCODE "0" vc_after_install vc_install_failed
+
+    vc_install_failed:
+        DetailPrint "Warning: VC++ installer returned non-zero exit code $EXITCODE"
+        MessageBox MB_OK "VC++ Redistributable 설치에 실패했거나 사용자가 설치를 취소했습니다.\\n앱 실행에 문제가 있을 수 있습니다."
+        Goto vc_done
+
+    ;---------------------
+    ; 설치 후 재확인
+    ;---------------------
+    
+    vc_after_install:
+        SetRegView 32
+        ReadRegDWORD $0 HKLM "${x86}" "Installed"
+        IntCmp $0 1 vc_after_ok vc_after_check_sys32 vc_after_check_sys32
+
+    vc_after_check_sys32:
+        IfFileExists "${dll}" vc_after_ok vc_after_not_ok
+        
+    vc_after_not_ok:
+        MessageBox MB_OK "VC++ Redistributable 설치 후 파일이 확인되지 않습니다.\\n앱 실행에 문제가 있을 수 있습니다."
+        StrCpy $VCOK "0"
+        Goto vc_after_done
+    vc_after_ok:
+        StrCpy $VCOK "1"
+    vc_after_done:
+        SetRegView 64
+        Goto vc_done
+
+    vc_done:
+        ;MessageBox MB_OK "VC++ Redistributable 설치 확인됨"
+        DetailPrint "VC++ Redistributable (x86) check complete."
+
+SectionEnd
+
+        `;
+    }
 }
 
 // NSIS 사용시에 2GB 이상의 대용량 배포의 문제점

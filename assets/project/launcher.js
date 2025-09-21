@@ -1,4 +1,3 @@
-
 var process = window.process;
 var nw = window.nw;
 var APP = nw.App;
@@ -12,7 +11,7 @@ APP.on('open', function (argString) {
     // Parse argString to find out what args were passed to the second instance.
     // console.error('open APP.argv: ', APP.argv)
     console.error('open argString: ', argString)
-    
+
     // 두번째 열려고 하는 (더블클릭) 파일 부터 전달됨
     // argString:
     // "C:\Program Files (x86)\tovsoft\Test App\testApp3.exe"

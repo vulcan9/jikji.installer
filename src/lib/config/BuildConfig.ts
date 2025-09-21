@@ -40,6 +40,8 @@ export class BuildConfig {
         'build'
     ];
     public overriddenProperties: any = {};
+    // VC++ Redistributable 설치 체크 과정을 추가할지 여부
+    public install_visualCpp: boolean = false;
 
     constructor(pkg: any = {}) {
 

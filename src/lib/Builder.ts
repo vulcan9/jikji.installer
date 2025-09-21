@@ -12,7 +12,7 @@ import { Downloader } from './Downloader.js';
 import { FFmpegDownloader } from './FFmpegDownloader.js';
 import { BuildConfig } from './config/index.js';
 import { DownloaderBase, NsisVersionInfo } from './common/index.js';
-import { Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
+import { INsisComposerOptions, Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
 import {
     compress,
     copyFileAsync,
@@ -482,7 +482,8 @@ export class Builder {
         const files: string[] = await globby(config.files, {
             cwd: this.dir,
             // TODO: https://github.com/isaacs/node-glob#options, warn for cyclic links.
-            follow: true,
+            // (2025.09.19 ~) 링크 참조일때 무한 순환참조 가능성이 있으므로 false 설정함
+            follow: false,
             mark: true,
             ignore,
         });
@@ -556,13 +557,9 @@ export class Builder {
         await fs.copy(src, dest);
     }
 
-    protected async buildNsisDiffUpdater(platform: string, arch: string, versionInfo: NsisVersionInfo, fromVersion: string, toVersion: string, pkg: any, config: BuildConfig) {
+    protected getNsisComposerOptions(config: BuildConfig): INsisComposerOptions {
+        return {
 
-        const diffNsis = path.resolve(this.dir, config.output, `${pkg.name}-${toVersion} (${platform} ${arch})-(update from ${fromVersion}).exe`);
-        const fromDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
-        const toDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
-
-        const data = await (new NsisDiffer(fromDir, toDir, {
             // Basic.
             productName: config.win.productName,
             companyName: config.win.companyName,
@@ -584,16 +581,29 @@ export class Builder {
 
             languages: config.nsis.languages,
             installDirectory: config.nsis.installDirectory,
+            install_visualCpp: config.install_visualCpp,
 
             // Output.
-            output: diffNsis,
-            // nwFiles: config.nwFiles,
+            output: config.output,
+            // output: targetNsis,
             appName: config.appName,
             childApp: config.childApp,
             resource: config.resource,
             uninstall: config.uninstall,
             associate: config.associate
 
+        };
+    }
+
+    protected async buildNsisDiffUpdater(platform: string, arch: string, versionInfo: NsisVersionInfo, fromVersion: string, toVersion: string, pkg: any, config: BuildConfig) {
+
+        const targetNsis = path.resolve(this.dir, config.output, `${pkg.name}-${toVersion} (${platform} ${arch})-(update from ${fromVersion}).exe`);
+        const fromDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(fromVersion)).source);
+        const toDir = path.resolve(this.dir, config.output, (await versionInfo.getVersion(toVersion)).source);
+
+        const data = await (new NsisDiffer(fromDir, toDir, {
+            ...this.getNsisComposerOptions(config),
+            output: targetNsis,
         })).make();
 
         const script = await tmpName();
@@ -606,7 +616,7 @@ export class Builder {
             console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
             await fs.remove(script);
         }
-        await versionInfo.addUpdater(toVersion, fromVersion, arch, diffNsis);
+        await versionInfo.addUpdater(toVersion, fromVersion, arch, targetNsis);
     }
 
     protected async buildDirTarget(platform: string, arch: string, runtimeDir: string, pkg: any, config: BuildConfig): Promise<string> {
@@ -695,38 +705,8 @@ export class Builder {
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
         const data = await (new NsisComposer({
-
-            // Basic.
-            productName: config.win.productName,
-            companyName: config.win.companyName,
-            description: config.win.fileDescription,
-            version: fixWindowsVersion(config.win.productVersion),
-            copyright: config.win.copyright,
-
-            publisher: config.win.publisher,
-            exeName: config.win.exeName,
-            programGroupName: config.win.programGroupName,
-
-            theme: config.nsis.theme ? path.resolve(this.dir, config.nsis.theme) : '',
-            license: config.nsis.license ? path.resolve(this.dir, config.nsis.license) : '',
-            web: config.nsis.web,
-
-            // Compression.
-            compression: 'lzma',
-            solid: true,
-
-            languages: config.nsis.languages,
-            installDirectory: config.nsis.installDirectory,
-
-            // Output.
+            ...this.getNsisComposerOptions(config),
             output: targetNsis,
-            // nwFiles: config.nwFiles,
-            appName: config.appName,
-            childApp: config.childApp,
-            resource: config.resource,
-            uninstall: config.uninstall,
-            associate: config.associate
-
         })).make();
 
         const script = await tmpName();
@@ -771,38 +751,8 @@ export class Builder {
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const data = await (new Nsis7Zipper(sourceArchive, {
-
-            // Basic.
-            productName: config.win.productName,
-            companyName: config.win.companyName,
-            description: config.win.fileDescription,
-            version: fixWindowsVersion(config.win.productVersion),
-            copyright: config.win.copyright,
-
-            publisher: config.win.publisher,
-            exeName: config.win.exeName,
-            programGroupName: config.win.programGroupName,
-
-            theme: config.nsis.theme ? path.resolve(this.dir, config.nsis.theme) : '',
-            license: config.nsis.license ? path.resolve(this.dir, config.nsis.license) : '',
-            web: config.nsis.web,
-
-            // Compression.
-            compression: 'lzma',
-            solid: true,
-
-            languages: config.nsis.languages,
-            installDirectory: config.nsis.installDirectory,
-
-            // Output.
+            ...this.getNsisComposerOptions(config),
             output: targetNsis,
-            // nwFiles: config.nwFiles,
-            appName: config.appName,
-            childApp: config.childApp,
-            resource: config.resource,
-            uninstall: config.uninstall,
-            associate: config.associate
-
         })).make();
 
         const script = await tmpName();

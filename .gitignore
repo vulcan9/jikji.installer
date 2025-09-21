@@ -3,7 +3,7 @@
 node_modules
 /packages/nsis-compat-updater/dist
 /packages/nsis-compat-tester/dist
-/assets/project/dist
+/assets/project/dist_sample
 /caches
 /dist
-/dist_sample
+dist_sample

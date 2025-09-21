@@ -1,6 +1,11 @@
-const {exec} = require('child_process');
-const argv = require('yargs').argv;
-const path = require('path');
+import path, {dirname} from 'path';
+import {exec} from 'child_process';
+import yargs from 'yargs';
+import {hideBin} from "yargs/helpers";
+import {fileURLToPath} from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const argv = yargs(hideBin(process.argv)).parseSync();
 
 // node_modules 모듈 폴더 참조 경로 추가해줌
 // process.mainModule.paths.unshift(path.resolve(__dirname, 'dist'));
@@ -15,10 +20,10 @@ function npmPackage(done) {
     const isRun = getArgv('run') || false;
 
     var command, args;
-    if(isRun){
+    if (isRun) {
         command = path.resolve(__dirname, './dist/bin/run');
         args = ' --x86';
-    }else{
+    } else {
         command = path.resolve(__dirname, './dist/bin/build');
         args = ' --tasks win-x86';
     }
@@ -31,10 +36,10 @@ function npmPackage(done) {
         shell: true,
         cwd: folder
     };
-    execute(command, option, function(){
+    execute(command, option, function () {
         console.log('# 패키지 완료');
         console.log('');
-        if(done) done();
+        if (done) done();
     });
 }
 
@@ -76,11 +81,11 @@ function execute(command, options, cb) {
     if (options.shell === undefined) options.shell = true;
 
     // 실시간 로그 표시
-    var child = exec(command, options, function(error, stdout, stderr){
+    var child = exec(command, options, function (error, stdout, stderr) {
         if (error !== null) console.log('exec error: ', error);
-        if(stdout) console.log('stdout: ' + stdout);
-        if(stderr) console.log('stderr: ', stderr);
-        if(cb) cb();
+        if (stdout) console.log('stdout: ' + stdout);
+        if (stderr) console.log('stderr: ', stderr);
+        if (cb) cb();
     });
     // child.stdout.setEncoding('utf8');
     // child.stdout.pipe(process.stdout);

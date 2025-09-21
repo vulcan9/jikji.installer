@@ -63,7 +63,7 @@ export class Runner {
             flavor: 'sdk',
             mirror: this.options.mirror,
             useCaches: true,
-            showProgress: this.options.mute ? false : true,
+            showProgress: !this.options.mute,
             forceCaches: this.options.forceCaches,
             destination: this.options.destination,
         });
@@ -126,7 +126,7 @@ export class Runner {
             platform, arch,
             version: config.nwVersion,
             useCaches: true,
-            showProgress: this.options.mute ? false : true,
+            showProgress: !this.options.mute,
             forceCaches: this.options.forceCaches,
             destination: this.options.destination,
         });

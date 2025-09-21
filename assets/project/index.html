@@ -10,11 +10,11 @@
 <body>
 <script>
 
-// process.exit(parseInt(nw.App.argv[0]));
+    // process.exit(parseInt(nw.App.argv[0]));
 
 </script>
 
-GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOD
+GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOD!!
 
 
 <button onclick="setup();">set up</button>
@@ -24,16 +24,16 @@ GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOD
     // 프로세스 종료(창이 닫힐때)까지 시간이 좀 걸리므로 미리 감춘다.
     // WIN.hide();
 
-    function setup(){
+    function setup() {
         var hasError = false;
 
         var nw = window.nw;
         var WIN = nw.Window.get();
 
         process.on('uncaughtException', onException);
-        function onException(err){
+        function onException(err) {
             hasError = true;
-            if(WIN) WIN.show();
+            if (WIN) WIN.show();
 
             // var msg = '# Uncaught Exception 오류가 발생 했습니다.\n' +
             //     '[Caught Exception] : ' + err + '\n\n' + err.stack;
@@ -50,40 +50,49 @@ GOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOD
 
         /*/
 
-        try{
+        try {
             // setup exe를 실행한다.
             execute();
-        }catch(err){
+        } catch (err) {
             hasError = true;
             onException(err);
-        }finally {
+        } finally {
 
             // setTimeout(function(){
-                if(hasError) return;
-                WIN.hide();
-                // win.close();
+            if (hasError) return;
+            WIN.hide();
+            // win.close();
             // }, 1000);
 
             // 설치 프로그램이 동작할 충분한 시간을 준다.
             // setTimeout(function(){
-                process.off('uncaughtException', onException);
-                if(hasError) return;
+            process.off('uncaughtException', onException);
+            if (hasError) return;
 
-                // 프로그램을 종료한다.
-                // process 살아있으면 install할때 프로그램 강제종료 alert 창 뜸
-                // install exe 실행 취소할 수도 있으므로 여기에서도 종료해줌
-                WIN.close(true);
-                nw.App.quit();
+            // 프로그램을 종료한다.
+            // process 살아있으면 install할때 프로그램 강제종료 alert 창 뜸
+            // install exe 실행 취소할 수도 있으므로 여기에서도 종료해줌
+            WIN.close(true);
+            nw.App.quit();
 
             // }, 10000);
         }
 
         //*/
 
-        function execute(){
+        function execute() {
             // console.error('execute : ', nw===this.nw, window.nw === this.nw, window.nw, this.nw);
 
-            var setupFile = "D:\\Jik-ji Project\\jikji.installer\\dist_sample\\testApp5-0.1.11 (win x86).exe";
+            var setupFile = "D:/Jik-ji Project/jikji.installer/assets/project/dist_sample/testApp5-0.1.11 (win x86).exe";
+            try {
+                var fs = require('fs');
+                fs.accessSync(setupFile, fs.constants.F_OK);
+
+            } catch (err) {
+                alert("파일 없음: " + setupFile);
+                return;
+            }
+
             var command = '"' + setupFile + '"';
             alert('실행: ' + setupFile);
 
