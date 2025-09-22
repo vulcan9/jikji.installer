@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.2",
+    "version": "1.18.3",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js",
@@ -27,8 +27,8 @@
         "lint:fix": "eslint 'src/**/*.{ts,tsx,js,jsx}' --fix",
         "샘플 패키징 실행 방법": "assets/project를 IDE에서 열고 dependencies 설치 확인 후 npm run build 실행",
         "샘플 패키징 실행 (수정 필요함)": "--------------------------------------------------------------",
-        "sample": "npm run build && node sample.js --dir=./assets/project",
-        "sampleRun": "npm run build && node sample.js --dir=./assets/project --run"
+        "sample": "npm run build && node sample_installer.js --dir=./assets/project",
+        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run"
     },
     "repository": {
         "type": "git",

@@ -10,11 +10,21 @@
 
 # 디버깅
 
-* `preserveScript` 빌드 옵션 설정
+* 빌드 옵션 설정
+    - `preserveSource` : 압축 소스 폴더 보존
+    - `preserveArchive` : 압축 파일 보존
+    - `preserveScript` : NSIS 스크립트 파일 보존
+
+* 로그 출력 방법
+    - 환경 변수 설정 : DEBUG = *
+    - https://www.npmjs.com/package/debug
 
 ```
-// 생성된 nsi 파일을 삭제하지 않음
-"build": "build --preserveScript --tasks win-x86 --mirror https://dl.nwjs.io/ .",
+# 생성된 nsi 파일을 삭제하지 않음
+"build": "build --preserveSource --preserveArchive --preserveScript --tasks win-x86 --mirror https://dl.nwjs.io/ .",
+
+# 디버그 로그 출력
+"build": "cross-env DEBUG=* build --preserveSource ...",
 ```
 
 * 콘솔창에서 nsi 파일 경로(temp 폴더)를 확인한 뒤
