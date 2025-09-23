@@ -43,30 +43,20 @@ export abstract class DownloaderBase {
 
     public abstract fetch(): Promise<string>;
 
-    protected abstract handleVersion(version: string): Promise<string>;
-
     public async fetchAndExtract() {
-
         const archive = await this.fetch();
         const dest = `${archive}-extracted`;
 
         await extractGeneric(archive, dest);
-
         return dest;
-
     }
 
     protected getVersions(): Promise<any> {
         return new Promise((resolve, reject) => {
             got('https://nwjs.io/versions.json', (err: any, _res: any, body: string) => {
-
-                if (err) {
-                    return reject(err);
-                }
-
+                if (err) return reject(err);
                 const json = JSON.parse(body);
                 resolve(json);
-
             });
         });
     }
@@ -76,7 +66,6 @@ export abstract class DownloaderBase {
     }
 
     protected handlePlatform(platform: string) {
-
         switch (platform) {
             case 'win32':
             case 'win':
@@ -90,11 +79,9 @@ export abstract class DownloaderBase {
             default:
                 throw new Error('ERROR_UNKNOWN_PLATFORM');
         }
-
     }
 
     protected handleArch(arch: string) {
-
         switch (arch) {
             case 'x86':
             case 'ia32':
@@ -104,7 +91,6 @@ export abstract class DownloaderBase {
             default:
                 throw new Error('ERROR_UNKNOWN_PLATFORM');
         }
-
     }
 
     protected async getLocalSize(path: string): Promise<number> {
@@ -130,7 +116,6 @@ export abstract class DownloaderBase {
     }
 
     protected async isFileSynced(url: string, pathStr: string) {
-
         const localSize = await this.getLocalSize(pathStr);
         const remoteSize = await this.getRemoteSize(url);
 
@@ -138,7 +123,6 @@ export abstract class DownloaderBase {
         debug('in isFileSynced', 'remoteSize', remoteSize);
 
         return localSize === remoteSize;
-
     }
 
     protected normalizeUrl(url: string): string {
@@ -200,9 +184,7 @@ export abstract class DownloaderBase {
 
             stream.on('error', reject);
             writeStream.on('error', reject);
-
             writeStream.on('finish', () => resolve());
-
             stream.pipe(writeStream);
         });
 

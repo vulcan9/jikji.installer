@@ -35,9 +35,7 @@ export class Downloader extends DownloaderBase {
 
     constructor(options: IDownloaderOptions) {
         super();
-
         this.options = mergeOptions(Downloader.DEFAULT_OPTIONS, options);
-
         if (this.options.destination !== this.destination) {
             this.setDestination(this.options.destination as string);
         }
@@ -45,13 +43,10 @@ export class Downloader extends DownloaderBase {
         if (process.env.NWJS_MIRROR) {
             this.options.mirror = process.env.NWJS_MIRROR;
         }
-
         debug('in constructor', 'options', this.options);
-
     }
 
     public async fetch() {
-
         const {mirror, platform, arch, version, flavor, showProgress} = this.options;
 
         const partVersion = await this.handleVersion(version!);
@@ -109,13 +104,11 @@ export class Downloader extends DownloaderBase {
     }
 
     protected extensionByPlatform(platform: string) {
+        platform = this.handlePlatform(platform);
         switch (platform) {
-            case 'win32':
             case 'win':
                 return 'zip';
-            case 'darwin':
             case 'osx':
-            case 'mac':
                 return 'zip';
             case 'linux':
                 return 'tar.gz';

@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.18.3
+
+Code Sign 적용 기능 추가
+
 ### 1.18.2
 
 * `dependencies` 패키지 버전 업데이트

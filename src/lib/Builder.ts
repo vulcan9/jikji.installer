@@ -611,11 +611,9 @@ export class Builder {
 
         await nsisBuild(toDir, script, {
             mute: !!this.options.mute,
+            output: targetNsis,
+            preserveScript: this.options.preserveScript || false
         });
-        if (!this.options.preserveScript) {
-            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
-            await fs.remove(script);
-        }
         await versionInfo.addUpdater(toVersion, fromVersion, arch, targetNsis);
     }
 
@@ -714,12 +712,10 @@ export class Builder {
 
         await nsisBuild(sourceDir, script, {
             mute: !!this.options.mute,
+            output: targetNsis,
+            preserveScript: this.options.preserveScript || false
         });
 
-        if (!this.options.preserveScript) {
-            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
-            await fs.remove(script);
-        }
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);
 
@@ -760,12 +756,9 @@ export class Builder {
 
         await nsisBuild(sourceDir, script, {
             mute: !!this.options.mute,
+            output: targetNsis,
+            preserveScript: this.options.preserveScript || false
         });
-
-        if (!this.options.preserveScript) {
-            console.log('# NSIS 스크립트 파일 삭제 (--preserveScript): ', script);
-            await fs.remove(script);
-        }
 
         await versionInfo.addVersion(pkg.version, '', sourceDir);
         await versionInfo.addInstaller(pkg.version, arch, targetNsis);

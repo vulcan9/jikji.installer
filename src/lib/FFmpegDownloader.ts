@@ -33,19 +33,14 @@ export class FFmpegDownloader extends DownloaderBase {
 
     constructor(options: IFFmpegDownloaderOptions) {
         super();
-
         this.options = mergeOptions(FFmpegDownloader.DEFAULT_OPTIONS, options);
-
         if (this.options.destination !== this.destination) {
             this.setDestination(this.options.destination!);
         }
-
         debug('in constructor', 'options', options);
-
     }
 
     public async fetch() {
-
         const {mirror, version, platform, arch, showProgress} = this.options;
 
         const partVersion = await this.handleVersion(version!);
@@ -69,7 +64,6 @@ export class FFmpegDownloader extends DownloaderBase {
                 return pathStr;
             }
         } catch (err: any) {
-
             debug('in fetch', 'err', err);
 
             if (err.code === 'ENOTFOUND' && this.options.useCaches) {
@@ -81,13 +75,10 @@ export class FFmpegDownloader extends DownloaderBase {
             } else {
                 throw err;
             }
-
         }
 
         await this.download(url, filename, pathStr, showProgress!);
-
         return pathStr;
-
     }
 
     protected async handleVersion(version: string) {

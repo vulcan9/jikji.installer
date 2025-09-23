@@ -28,7 +28,9 @@
         "샘플 패키징 실행 방법": "assets/project를 IDE에서 열고 dependencies 설치 확인 후 npm run build 실행",
         "샘플 패키징 실행 (수정 필요함)": "--------------------------------------------------------------",
         "sample": "npm run build && node sample_installer.js --dir=./assets/project",
-        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run"
+        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run",
+        "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
+        "codesign": "npm run build && node sample_codeSign.js --file=\"./assets/project/dist_sample/testApp5-0.1.11 (win x86).exe\""
     },
     "repository": {
         "type": "git",
