@@ -5,7 +5,8 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 
 ### 1.18.3
 
-Code Sign 적용 기능 추가
+* Code Sign 적용 기능 추가
+    - 실제 EV 인증서를 사용하기로 해서 적용하지는 않음
 
 ### 1.18.2
 
