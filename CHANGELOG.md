@@ -7,6 +7,7 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 
 * Code Sign 적용 기능 추가
     - 실제 EV 인증서를 사용하기로 해서 적용하지는 않음
+    - 설치파일을 원격 PC에서 USB 토큰으로 코드 사인하기로 함
 
 ### 1.18.2
 
