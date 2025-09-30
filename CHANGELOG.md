@@ -9,6 +9,12 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
     - 실제 EV 인증서를 사용하기로 해서 적용하지는 않음
     - 설치파일을 원격 PC에서 USB 토큰으로 코드 사인하기로 함
 
+```
+문제
+- 패키징 과정에서 `rcedit`을 이용하여 nw.exe 파일의 아이콘을 바꾸는 과정이 있음
+- nw.exe의 코드 사인이 유지되지 않는것 같음
+```
+
 ### 1.18.2
 
 * `dependencies` 패키지 버전 업데이트

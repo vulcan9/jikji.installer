@@ -31,6 +31,31 @@
 * `assets/scriptFileDebug.nsi` 에 복사
 * `HM NIS Edit` 프로그램에서 nsi 파일을 열고 컴파일 및 디버깅
 
+# 샘플
+
+```json
+{
+    "scripts": {
+        "build": "tsc --declaration",
+        "sample": "npm run build && node sample_installer.js --dir=./assets/project",
+        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run",
+        "jikji": "npm run build && node sample_installer.js --dir=./assets/jikji",
+        "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
+        "codesign": "npm run build && node sample_codeSign.js --file=\"./assets/project/dist_sample/testApp5-0.1.11 (win x86).exe\""
+    }
+}
+```
+
+### sample
+
+- `Program Files(x86)` 폴더에 nwJS가 설치되고
+- `AppData/Local` 폴더 아래에 child App (nwJS)이 별도로 설치되는 구조
+
+### jikji
+
+- `Program Files(x86)` 폴더에는 간단한 launcher exe만 설치되고
+- `AppData/Local` 폴더 아래에 child App (nwJS)이 설치되는 구조
+
 ------------------------------------------------------
 
 # nwjs-builder-phoenix [![npm version](https://img.shields.io/npm/v/nwjs-builder-phoenix.svg)](https://npmjs.org/package/nwjs-builder-phoenix) [![Standard Version](https://img.shields.io/badge/release-standard%20version-brightgreen.svg)](https://github.com/conventional-changelog/standard-version)

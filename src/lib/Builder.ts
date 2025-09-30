@@ -277,6 +277,8 @@ export class Builder {
                 'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
             };
             rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
+
+            console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: nw.exe의 코드 사인은 유지되지 않습니다.');
         });
     }
 

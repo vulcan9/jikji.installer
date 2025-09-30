@@ -28,6 +28,12 @@ function npmPackage(done) {
         args = ' --tasks win-x86';
     }
     args = args + ' --mirror https://dl.nwjs.io/ .';
+    // 압축 소스 폴더 보존
+    args += ' --preserveSource';
+    // 압축 파일 보존
+    // args += ' --preserveArchive';
+    // 생성한 NSIS 스크립트 파일 삭제하지 않음
+    // args += ' --preserveScript';
     command = 'node "' + command + '"' + args;
 
     // cd assets/project && npm pack

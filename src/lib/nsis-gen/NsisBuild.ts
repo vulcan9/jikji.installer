@@ -45,6 +45,7 @@ export async function nsisBuild(cwd: string, script: string, options: INsisBuild
 
             console.log('\x1b[31m%s\x1b[0m', '# 코드 사인은 자동화되지 않았습니다.');
             console.log('\x1b[31m%s\x1b[0m', '# 설치 파일은 USB 토큰을 통해 직접 코드 서명하셔야 합니다.');
+            console.log('\x1b[31m%s\x1b[0m', '# (주의. rcedit) nw.exe도 아이콘 변조로 인해 다시 서명해야 함.');
             // TODO: codeSign({});
 
             resolve({code, signal});

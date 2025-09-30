@@ -778,10 +778,10 @@ FunctionEnd
             }).join(' ');
         })();
 
-        // console.error('# 리소스 이동: \n', MOVE_LIST);
-        // console.error('# nwJS 설치: \n', EXCLUDE_LIST);
-        // console.error('# 삭제: \n', DELETE_LIST);
-        // console.error('\n');
+        console.error('# 리소스 이동: \n', MOVE_LIST);
+        console.error('# nwJS 설치: \n', EXCLUDE_LIST);
+        console.error('# 삭제: \n', DELETE_LIST);
+        console.error('\n');
 
         return `
 ;----------------------------
@@ -822,21 +822,24 @@ FunctionEnd
         # 방법 1: 
         # /r 옵션이 있을때는 폴더명 뒤에 \\*.* 을 붙여줘야 하위 경로까지 패턴 매칭되지 않음
         # File /nonfatal /a /r [/x 경로 패턴] .\\*.*
-        File /nonfatal /a ${EXCLUDE_LIST} .\\*.*
+        # File /nonfatal /a ${EXCLUDE_LIST} .\\*.*
+        CopyFiles /SILENT "$INSTDIR\\*.*" "$9"
         
         # chrome app 리소스 따로 복사해 줘야함
         # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${chromeAppDest}"
-        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${chromeAppDest}\\locales"
-        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${chromeAppDest}\\swiftshader"
+        # CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${chromeAppDest}\\locales"
+        # CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${chromeAppDest}\\swiftshader"
+        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "$9\\locales"
+        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "$9\\swiftshader"
         
-        /*
+        
         # 방법 2: nwJS 설치 (installer 파일 그대로 사용)
         # resource로 정의된 리스트는 $INSTDIR 폴더에서 제외됨
         # moves 목록은 이미 실행됬으므로 전체 폴더를 카피해도 됨 (chrome app만 남아있음)
-        CopyFiles /SILENT "$INSTDIR\\*.*" "${chromeAppDest}"
+        # CopyFiles /SILENT "$INSTDIR\\*.*" "${chromeAppDest}"
+        
         # 제외 목록 삭제
         ${DELETE_LIST}
-        */
         
     skipChildApp:
 !macroend

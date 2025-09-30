@@ -1,36 +1,29 @@
 {
-    "name": "testApp5",
-    "domain": "jikji.editor.testapp",
-    "version": "0.1.11",
+    "scripts": {},
+    "dependencies": {},
+    "author": "vulcan9",
+    "license": "MIT",
+    "-----------------------": "-----------------------",
+    "version": "0.1.0",
+    "name": "jikji.new.launcher",
+    "domain": "jikji.new.launcher",
     "description": "epub 저작 도구",
+    "------------------------": "-----------------------",
     "main": "index.html",
     "inject_js_start": "launcher.js",
-    "빌드 옵션": "--preserveSource --preserveArchive --preserveScript",
-    "디버깅 옵션 (환경 변수 설정)": "cross-env DEBUG=*",
-    "scripts": {
-        "buildlog": "cross-env DEBUG=* build --preserveSource --tasks win-x86 --mirror https://dl.nwjs.io/ .",
-        "build": "build --preserveSource --preserveArchive --preserveScript --tasks win-x86 --mirror https://dl.nwjs.io/ .",
-        "start": "run --x86 --mirror https://dl.nwjs.io/ ."
-    },
-    "로컬 설치 @jj-editor/installer": "npm i --save file:../../",
-    "dependencies": {
-        "@jj-editor/installer": "file:../../"
-    },
-    "author": "evshiron",
-    "license": "MIT",
     "window": {
-        "icon": "assets/winIcon.png"
+        "icon": "assets/appicon.ico"
     },
-    "nwjs-builder-phoenix-설정": "(diffUpdaters:true) versions.nsis.json 파일을 유지하면 update.exe 파일이 생성됨",
+    "-------------------------": "-----------------------",
     "build": {
         "nwVersion": "0.77.0",
         "nwFlavor": "normal",
-        "output": "./dist_sample",
+        "output": "./dist",
         "outputPattern": "${NAME}-${VERSION} (${PLATFORM} ${ARCH})",
         "packed": false,
         "ffmpegIntegration": true,
         "//install_visualCpp": "VC++ Redistributable 설치 체크",
-        "install_visualCpp": true,
+        "install_visualCpp": false,
         "targets": [
             "nsis7z"
         ],
@@ -39,51 +32,37 @@
         ],
         "excludes": [
             "node_modules",
-            "scriptFileDebug.nsi",
-            "test.bin",
-            "testApp3.exe"
+            "scriptFileDebug.nsi"
         ],
         "//resource": "(생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때. 패키징 폴더에는 제외됨",
         "resource": [
             {
                 "src": "한글 폴더",
-                "dest": "$LOCALAPPDATA/testApp5/firstrun/한글 폴더"
+                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun/한글 폴더"
             }
         ],
-        "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때",
-        "uninstall": "$LOCALAPPDATA/jikji.editor.demo.setup/test",
+        "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때 (firstrunFolder)",
+        "uninstall": "$LOCALAPPDATA/jikji.new.launcher/firstrun",
         "//childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)",
         "childApp": {
-            "name": "jikji.editor.testapp",
+            "name": "jikji.new.launcher.setup",
             "//excludes": "(생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록",
             "excludes": [
-                "package.json",
-                "test.bin",
-                "README.md",
-                "index.html",
-                "uninstall.exe",
-                "한글 폴더"
+                "jikji.editor.launcher.exe",
+                "jikji.editor.launcher.ini"
             ],
             "//moves": "(생략 가능) childApp으로 복사 후 패키징 폴더에서 삭제할 목록",
             "moves": [
                 "uninstall",
                 "theme",
-                "engFolder",
                 "assets"
             ],
-            "dest": "$LOCALAPPDATA/jikji.editor.testapp.setup",
+            "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
             "//uninstall app": "uninstall 폴더의 package.json 파일 name (uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다)",
             "//uninstall app 호출": "install.exe에서 호출되는 uninstall과정에서는 호출 안됨 (uninstall.exe 단독 실행시에만 호출됨)",
-            "uninstallApp": "$LOCALAPPDATA/testApp5.uninstall"
+            "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall"
         },
-        "associate": [
-            {
-                "description": "JIK-JI Editor Project File",
-                "ext": "ta5",
-                "fileClass": "Testapp5.project",
-                "icon": "assets/exeIcon.ico"
-            }
-        ],
+        "associate": [],
         "//strippedProperties": "패키징 할때 package json 파일에서 다음 항목들을 누락 시킴",
         "strippedProperties": [
             "scripts",
@@ -99,8 +78,8 @@
             "publisher": "(주) 토브소프트",
             "fileDescription": "epub 저작 도구",
             "copyright": "tovsoft (c) 2020",
-            "icon": "assets/exeIcon.ico",
-            "exeName": "testApp3",
+            "icon": "assets/appicon.ico",
+            "exeName": "nw",
             "programGroupName": "토브소프트"
         },
         "nsis": {
