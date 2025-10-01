@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+import fs from 'fs-extra';
+import path from 'path';
 
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import createDebug from 'debug';
+import { Builder_onlyLauncher } from '../lib/Builder_onlyLauncher.js';
 import { Builder } from '../lib/index.js';
 
 const debug = createDebug('build:commandline:build');
@@ -85,7 +88,8 @@ const argv = yargs(hideBin(process.argv))
 
     debug('in commandline', 'argv', argv);
 
-    const builder = new Builder({
+
+    const opts = {
         win: argv.win,
         mac: argv.mac,
         linux: argv.linux,
@@ -100,12 +104,17 @@ const argv = yargs(hideBin(process.argv))
         preserveSource: argv.preserveSource,
         preserveArchive: argv.preserveArchive,
         preserveScript: argv.preserveScript,
-    }, argv._.shift()?.toString() ?? '');
+    };
 
-    await builder.build();
+    const dir = argv._.shift()?.toString() ?? '';
+    const configFile = path.resolve(dir, opts.chromeApp ? 'manifest.json' : 'package.json');
+    const pkg: any = await fs.readJson(configFile);
+    
+    const BuilderStrategy = pkg.build.onlyLauncher ? Builder_onlyLauncher : Builder;
+    const builder = new BuilderStrategy(opts, dir);
+    await builder.build(pkg);
 
     process.exitCode = 0;
-
 })()
     .catch((err) => {
 

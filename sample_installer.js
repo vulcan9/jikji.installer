@@ -1,8 +1,8 @@
-import path, {dirname} from 'path';
-import {exec} from 'child_process';
+import { exec } from 'child_process';
+import { fileURLToPath } from "node:url";
+import path, { dirname } from 'path';
 import yargs from 'yargs';
-import {hideBin} from "yargs/helpers";
-import {fileURLToPath} from "node:url";
+import { hideBin } from "yargs/helpers";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = yargs(hideBin(process.argv)).parseSync();
@@ -33,7 +33,7 @@ function npmPackage(done) {
     // 압축 파일 보존
     // args += ' --preserveArchive';
     // 생성한 NSIS 스크립트 파일 삭제하지 않음
-    // args += ' --preserveScript';
+    args += ' --preserveScript';
     command = 'node "' + command + '"' + args;
 
     // cd assets/project && npm pack
@@ -87,10 +87,14 @@ function execute(command, options, cb) {
     if (options.shell === undefined) options.shell = true;
 
     // 실시간 로그 표시
+    // ANSI 코드 직접 사용
+    // \x1b[32m: 초록색 시작
+    // \x1b[31m: 빨강 시작
+    // \x1b[0m: 리셋
     var child = exec(command, options, function (error, stdout, stderr) {
         if (error !== null) console.log('exec error: ', error);
-        if (stdout) console.log('stdout: ' + stdout);
-        if (stderr) console.log('stderr: ', stderr);
+        if (stdout) console.log('\x1b[32m%s\x1b[0m', stdout);
+        if (stderr) console.log('\x1b[31m%s\x1b[0m', stderr);
         if (cb) cb();
     });
     // child.stdout.setEncoding('utf8');

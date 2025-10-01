@@ -5,6 +5,7 @@ node_modules
 /packages/nsis-compat-tester/dist
 /assets/project/dist_sample
 /caches
-/dist
+dist
+dist/*
 dist_sample
 certs

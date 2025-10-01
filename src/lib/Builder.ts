@@ -1,18 +1,19 @@
 import path from 'path';
 
-import semver from 'semver';
 import fs from 'fs-extra';
+import semver from 'semver';
 
 import createDebug from 'debug';
 import globby from 'globby';
-import rcedit from 'rcedit';
 import plist from 'plist';
+import rcedit from 'rcedit';
 
 import { Downloader } from './Downloader.js';
 import { FFmpegDownloader } from './FFmpegDownloader.js';
-import { BuildConfig } from './config/index.js';
 import { DownloaderBase, NsisVersionInfo } from './common/index.js';
-import { INsisComposerOptions, Nsis7Zipper, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
+import { BuildConfig } from './config/index.js';
+import { NsisComposer_onlyLauncher } from './nsis-gen/NsisComposer_onlyLauncher.js';
+import { INsisComposerOptions, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
 import {
     compress,
     copyFileAsync,
@@ -86,7 +87,7 @@ export class Builder {
         debug('in constructor', 'options', this.options);
     }
 
-    public async build() {
+    public async build(pkg: any) {
         const tasks: string[][] = [];
 
         [
@@ -157,7 +158,7 @@ export class Builder {
                         console.info(`Building for ${platform}, ${arch} starts...`);
                     }
 
-                    await builder.build();
+                    await builder.build(pkg);
 
                     if (!this.options.mute) {
                         console.info(
@@ -169,11 +170,7 @@ export class Builder {
 
         } else {
 
-            const configFile = path.resolve(this.dir, this.options.chromeApp ? 'manifest.json' : 'package.json');
-            const pkg: any = await fs.readJson(configFile);
             const config = new BuildConfig(pkg);
-
-            console.log('# BuildConfig: ', configFile);
             debug('in build', 'config', config);
 
             for (const [platform, arch] of tasks) {
@@ -276,9 +273,9 @@ export class Builder {
                 },
                 'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
             };
-            rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
 
             console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: nw.exe의 코드 사인은 유지되지 않습니다.');
+            rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
         });
     }
 
@@ -584,6 +581,7 @@ export class Builder {
             languages: config.nsis.languages,
             installDirectory: config.nsis.installDirectory,
             install_visualCpp: config.install_visualCpp,
+            onlyLauncher: config.onlyLauncher,
 
             // Output.
             output: config.output,
@@ -621,12 +619,17 @@ export class Builder {
 
     protected async buildDirTarget(platform: string, arch: string, runtimeDir: string, pkg: any, config: BuildConfig): Promise<string> {
 
+        // nwJS 압축 해지 폴더 경로
+        const runtimeRoot = await findRuntimeRoot(platform, runtimeDir);
+
+        // 설치에 포함시킬  폴더
         const targetDir = path.resolve(this.dir, config.output, this.parseOutputPattern(config.outputPattern, {
             name: pkg.name,
             version: pkg.version,
             platform, arch,
         }, pkg, config));
-        const runtimeRoot = await findRuntimeRoot(platform, runtimeDir);
+        
+        // 설치에 포함시킬 nwJS 폴더 경로
         const appRoot = path.resolve(targetDir, (() => {
             switch (platform) {
                 case 'win32':
@@ -644,6 +647,8 @@ export class Builder {
 
         await fs.emptyDir(targetDir);
         await fs.copy(runtimeRoot, targetDir, {
+            // false (기본값): 심볼릭 링크를 그대로 복사
+            // true: 심볼릭 링크를 따라가서 실제 파일/폴더 내용을 복사
             //dereference: true,
         });
         if (config.ffmpegIntegration) {
@@ -704,10 +709,18 @@ export class Builder {
 
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
-        const data = await (new NsisComposer({
+
+        const options = {
             ...this.getNsisComposerOptions(config),
             output: targetNsis,
-        })).make();
+        };
+        const composer = (config.onlyLauncher) ? new NsisComposer_onlyLauncher(options) : new NsisComposer(options);
+        const data = await composer.make();
+
+        // const data = await (new NsisComposer({
+        //     ...this.getNsisComposerOptions(config),
+        //     output: targetNsis,
+        // })).make();
 
         const script = await tmpName();
         await fs.writeFile(script, data);
@@ -748,10 +761,17 @@ export class Builder {
         // 인스톨 exe 파일 생성 경로
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
-        const data = await (new Nsis7Zipper(sourceArchive, {
+        const options = {
             ...this.getNsisComposerOptions(config),
             output: targetNsis,
-        })).make();
+        };
+        const composer = (config.onlyLauncher) ? new NsisComposer_onlyLauncher(options) : new NsisComposer(options);
+        const data = await composer.make();
+
+        // const data = await (new Nsis7Zipper(sourceArchive, {
+        //     ...this.getNsisComposerOptions(config),
+        //     output: targetNsis,
+        // })).make();
 
         const script = await tmpName();
         await fs.writeFile(script, data);
@@ -827,13 +847,13 @@ export class Builder {
          console.info(`\n* Dir: ${ targetDir }`);
 
          if(config.childApp.dest) {
-         config.nwFiles = await globby(['*'], {
-         cwd: targetDir,
-         follow: true,
-         mark: true,
-         ignore: config.childApp.excludes,
+            config.nwFiles = await globby(['*'], {
+            cwd: targetDir,
+            follow: true,
+            mark: true,
+            ignore: config.childApp.excludes,
          });
-         console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
+            console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
          }
 
          //*******************************************/

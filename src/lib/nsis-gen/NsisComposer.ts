@@ -2,8 +2,8 @@
 
 import { dirname, resolve, win32 } from 'path';
 
-import { fixWindowsVersion } from '../util/index.js';
 import { fileURLToPath } from 'node:url';
+import { fixWindowsVersion } from '../util/index.js';
 
 export interface INsisComposerOptions {
 
@@ -30,6 +30,8 @@ export interface INsisComposerOptions {
     installDirectory: string;
     // VC++ Redistributable 설치 체크 과정을 추가할지 여부
     install_visualCpp: boolean;
+    // child App을 호출하는 launcher만 Program Files 폴더에 설치
+    onlyLauncher: boolean;
 
     // Output.
     output: string;
@@ -44,6 +46,7 @@ export interface INsisComposerOptions {
         excludes?: string[], moves: string[],
         dest: string,
         uninstallApp?: string
+        uninstallAppFolder?: string
     };
     appName: string;
     // nwFiles: string[];
@@ -761,6 +764,7 @@ FunctionEnd
             }).join('');
         })();
 
+        // 제외 처리는 폴더 복사 후 삭제 방식으로 (제외 옵션 없음)
         const EXCLUDE_LIST = (() => {
             const list: string[] = excludes.concat(moves);
             return list.map(p => {
@@ -770,11 +774,11 @@ FunctionEnd
             }).join(' ');
         })();
 
-        // 사용안함
         const DELETE_LIST = (() => {
             return excludes.map(p => {
                 const path = win32.normalize(chromeAppDest + '/' + p);
-                return (p.includes('.') ? 'Delete' : 'RMDir') + ` "${path}"\n`;
+                // 비어있지 않은 폴더도 삭제하려면 /r 옵션을 줘야함
+                return (p.includes('.') ? 'Delete' : 'RMDir /r') + ` "${path}"\n`;
             }).join(' ');
         })();
 
@@ -921,7 +925,7 @@ FunctionEnd
     Delete         "${dest}\\*.*"
     RMDir /r       "${dest}"
             `;
-        });
+        }).join('');
 
         return `
 ;----------------------------
@@ -1157,7 +1161,7 @@ FunctionEnd
 
         // Uninstall App  : childApp의 uninstall 폴더의 package.json 파일 name
         const chromiumUninstallApp = childApp.uninstallApp || '';
-
+        const uninstallAppFolder = childApp.uninstallAppFolder || '\${CHILD_APP_DEST}\\uninstall';
         return `
 ;----------------------------------------------------------
 ; App 호출하여 특정 로직을 실행
@@ -1208,8 +1212,9 @@ Function un.ChildAppProcess
         StrCpy $childAppPath "\${CHILD_APP_DEST}\\\${EXE_FILE_FULL_NAME}"
         
         Var /GLOBAL uninstallAppFolder
-        StrCpy $uninstallAppFolder "\${CHILD_APP_DEST}\\uninstall"
-        
+        # StrCpy $uninstallAppFolder "\${CHILD_APP_DEST}\\uninstall"
+        StrCpy $uninstallAppFolder "${uninstallAppFolder}"
+
         DetailPrint 'childAppPath: "$childAppPath"'
         DetailPrint 'uninstallAppFolder: "$uninstallAppFolder"'
         

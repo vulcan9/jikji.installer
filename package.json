@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.3",
+    "version": "1.18.4",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js",
@@ -29,8 +29,8 @@
         "샘플 패키징 실행 (수정 필요함)": "--------------------------------------------------------------",
         "빌드 옵션": "--preserveSource --preserveArchive --preserveScript",
         "디버깅 옵션 (환경 변수 설정)": "cross-env DEBUG=*",
+        "sample과 jikji 샘플의 차이": "jikji 설정 (onlyLauncher: true)",
         "sample": "npm run build && node sample_installer.js --dir=./assets/project",
-        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run",
         "jikji": "npm run build && node sample_installer.js --dir=./assets/jikji",
         "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
         "codesign": "npm run build && node sample_codeSign.js --file=\"./assets/project/dist_sample/testApp5-0.1.11 (win x86).exe\""

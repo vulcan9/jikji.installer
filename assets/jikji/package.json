@@ -1,29 +1,22 @@
 {
-    "scripts": {},
-    "dependencies": {},
-    "author": "vulcan9",
-    "license": "MIT",
-    "-----------------------": "-----------------------",
+    "-": "-----------------------",
     "version": "0.1.0",
     "name": "jikji.new.launcher",
     "domain": "jikji.new.launcher",
-    "description": "epub 저작 도구",
-    "------------------------": "-----------------------",
-    "main": "index.html",
-    "inject_js_start": "launcher.js",
-    "window": {
-        "icon": "assets/appicon.ico"
-    },
-    "-------------------------": "-----------------------",
+    "description": "인스톨러 설정",
+    "--": "-----------------------",
     "build": {
         "nwVersion": "0.77.0",
         "nwFlavor": "normal",
         "output": "./dist",
         "outputPattern": "${NAME}-${VERSION} (${PLATFORM} ${ARCH})",
+        "//packed": "(사용안함) 리소스를 nw.exe파일에 포함시킴",
         "packed": false,
         "ffmpegIntegration": true,
         "//install_visualCpp": "VC++ Redistributable 설치 체크",
         "install_visualCpp": false,
+        "//onlyLauncher": "child App을 호출하는 launcher만 Program Files 폴더에 설치",
+        "onlyLauncher": true,
         "targets": [
             "nsis7z"
         ],
@@ -39,6 +32,14 @@
             {
                 "src": "한글 폴더",
                 "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun/한글 폴더"
+            },
+            {
+                "src": "launcher",
+                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
+            },
+            {
+                "src": "uninstall",
+                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
             }
         ],
         "//uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때 (firstrunFolder)",
@@ -48,19 +49,21 @@
             "name": "jikji.new.launcher.setup",
             "//excludes": "(생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록",
             "excludes": [
+                "theme",
                 "jikji.editor.launcher.exe",
-                "jikji.editor.launcher.ini"
+                "jikji.editor.launcher.ini",
+                "LICENSE.txt",
+                "package.json",
+                "uninstall.exe"
             ],
             "//moves": "(생략 가능) childApp으로 복사 후 패키징 폴더에서 삭제할 목록",
-            "moves": [
-                "uninstall",
-                "theme",
-                "assets"
-            ],
+            "moves": [],
             "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
             "//uninstall app": "uninstall 폴더의 package.json 파일 name (uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다)",
             "//uninstall app 호출": "install.exe에서 호출되는 uninstall과정에서는 호출 안됨 (uninstall.exe 단독 실행시에만 호출됨)",
-            "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall"
+            "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall",
+            "//uninstallAppFolder": "resource로 지정한 폴더와 같게 지정. uninstall app 실행 폴더",
+            "uninstallAppFolder": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
         },
         "associate": [],
         "//strippedProperties": "패키징 할때 package json 파일에서 다음 항목들을 누락 시킴",
@@ -78,13 +81,13 @@
             "publisher": "(주) 토브소프트",
             "fileDescription": "epub 저작 도구",
             "copyright": "tovsoft (c) 2020",
-            "icon": "assets/appicon.ico",
+            "icon": "launcher/assets/appicon.ico",
             "exeName": "nw",
             "programGroupName": "토브소프트"
         },
         "nsis": {
             "theme": "theme",
-            "license": "assets/LICENSE.txt",
+            "license": "LICENSE.txt",
             "web": "https://tovsoft.co.kr/",
             "diffUpdaters": false
         }

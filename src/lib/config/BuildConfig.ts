@@ -1,9 +1,9 @@
 import { normalize } from 'path';
 
-import { WinConfig } from './WinConfig.js';
-import { MacConfig } from './MacConfig.js';
 import { LinuxConfig } from './LinuxConfig.js';
+import { MacConfig } from './MacConfig.js';
 import { NsisConfig } from './NsisConfig.js';
+import { WinConfig } from './WinConfig.js';
 
 export class BuildConfig {
 
@@ -42,6 +42,8 @@ export class BuildConfig {
     public overriddenProperties: any = {};
     // VC++ Redistributable 설치 체크 과정을 추가할지 여부
     public install_visualCpp: boolean = false;
+    // child App을 호출하는 launcher만 Program Files 폴더에 설치
+    public onlyLauncher: boolean = false;
 
     constructor(pkg: any = {}) {
 

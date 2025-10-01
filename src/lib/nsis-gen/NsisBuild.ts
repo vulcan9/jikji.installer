@@ -1,7 +1,7 @@
-import path from 'path';
 import { spawn } from 'child_process';
-import { fileURLToPath } from 'node:url';
 import fs from 'fs-extra';
+import { fileURLToPath } from 'node:url';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const DIR_VENDER = path.resolve(path.dirname(__filename), '../../../vender/');

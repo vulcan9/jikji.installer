@@ -1,12 +1,12 @@
-import path from 'path';
-import got from 'got';
-import ProgressBar from 'progress';
-import fs from 'fs-extra';
 import createDebug from 'debug';
+import fs from 'fs-extra';
+import got from 'got';
+import path from 'path';
+import ProgressBar from 'progress';
 
-import { Event } from './Event.js';
-import { extractGeneric } from '../util/index.js';
 import { fileURLToPath } from 'node:url';
+import { extractGeneric } from '../util/index.js';
+import { Event } from './Event.js';
 
 const debug = createDebug('build:downloader');
 

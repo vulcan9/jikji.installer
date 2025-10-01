@@ -15,6 +15,10 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 - nw.exe의 코드 사인이 유지되지 않는것 같음
 ```
 
+### 1.18.4
+
+onlyLauncher 패키징 모드 추가함
+
 ### 1.18.2
 
 * `dependencies` 패키지 버전 업데이트

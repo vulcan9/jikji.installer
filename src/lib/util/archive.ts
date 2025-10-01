@@ -1,6 +1,6 @@
-import { basename, dirname, join, normalize, resolve } from 'path';
-import fs from 'fs-extra';
 import { path7za } from '7zip-bin';
+import fs from 'fs-extra';
+import { basename, dirname, join, normalize, resolve } from 'path';
 
 import createDebug from 'debug';
 import { spawnAsync, tmpFile } from './index.js';
@@ -93,4 +93,21 @@ export async function compress(dir: string, files: string[], type: string, archi
 
     return code;
 
+}
+
+export async function folderZip(dir: string, folder: string, archive: string) {
+
+    debug('in compress', 'dir', dir);
+    debug('in compress', 'folder', folder);
+    debug('in compress', 'archive', archive);
+
+    const { code, signal } = await spawnAsync(path7za, [
+        'a',
+        archive,
+        join(folder, '*')
+    ], {
+        cwd: dir,
+    });
+
+    return code;
 }

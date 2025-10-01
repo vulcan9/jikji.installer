@@ -13,9 +13,7 @@
         "start": "run --x86 --mirror https://dl.nwjs.io/ ."
     },
     "로컬 설치 @jj-editor/installer": "npm i --save file:../../",
-    "dependencies": {
-        "@jj-editor/installer": "file:../../"
-    },
+    "dependencies": {},
     "author": "evshiron",
     "license": "MIT",
     "window": {
