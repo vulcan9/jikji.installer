@@ -18,9 +18,7 @@ Program Files 폴더에 런처 설치
 # 설정 내용
 
 ```json
-{
-    "-": "-----------------------",
-    
+{   
     // productVersion이 없으면 대신 사용됨
     "version": "0.1.0",
     // 설치파일 이름에 사용됨 (예: launcher.sample-0.1.0 (win x86).exe)
@@ -40,6 +38,7 @@ Program Files 폴더에 런처 설치
         "기본 설정": "-----------------------",
 
         "nwVersion": "0.77.0",
+        // 개발자 app으로 설정하려면 "sdk"로 설정
         "nwFlavor": "normal",
         // 리소스를 nw.exe파일에 포함시킬지 여부
         // true : 런타임에 Temp>nw144_16279 폴더에 리소스 압축 해지하여 사용

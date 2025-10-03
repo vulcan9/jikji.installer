@@ -13,7 +13,7 @@
     "inject_js_start": "launcher.js",
     "window": {
         "icon": "assets/favicon.png",
-        "frame": false,
+        "frame": true,
         "show": true,
         "transparent": false,
         "fullscreen": false,

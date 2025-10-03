@@ -12,7 +12,7 @@
         "기본 설정": "-----------------------",
 
         "nwVersion": "0.77.0",
-        "nwFlavor": "normal",
+        "nwFlavor": "sdk",
         "packed": false,
 
         "output": "./dist",

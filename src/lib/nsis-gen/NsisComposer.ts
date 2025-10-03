@@ -1078,6 +1078,8 @@ FunctionEnd
             const description = info.description || '';
             const icon = '$INSTDIR\\' + win32.normalize(info.icon) || exePath + ',0';
             const commandText = info.commandText || 'Open with \${EXE_FILE_NAME} Application';
+            // "%1" : 더블 클릭한 파일의 전체 경로 (절대 경로)
+            // $\\"%1$\\" --> "%1"
             const command = info.command || exePath + ' $\\"%1$\\"';
 
             /*
@@ -1096,6 +1098,8 @@ FunctionEnd
             return `!insertmacro APP_ASSOCIATE "${ext}" "${fileClass}" "${description}" "${icon}" "${commandText}" "${command}"`;
         }).join('\n\t');
 
+        console.log('APP_ASSOCIATE: ', APP_ASSOCIATE);
+            
         const APP_UNASSOCIATE = associate.map((info) => {
             if (!info.ext) return '';
             const ext = info.ext;
