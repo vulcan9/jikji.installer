@@ -2,32 +2,54 @@
     "-": "-----------------------",
     "version": "0.1.0",
     "name": "launcher.sample",
-    "domain": "launcher.sample",
     "description": "인스톨러 설정",
     "--": "-----------------------",
     "build": {
+        "onlyLauncher": true,
+        "install_visualCpp": false,
+        "ffmpegIntegration": true,
+        
+        "기본 설정": "-----------------------",
+
         "nwVersion": "0.77.0",
         "nwFlavor": "normal",
+        "packed": false,
+
         "output": "./dist",
         "outputPattern": "${NAME}-${VERSION} (${PLATFORM} ${ARCH})",
-        "x_packed": "(사용안함) 리소스를 nw.exe파일에 포함시킴",
-        "packed": false,
-        "ffmpegIntegration": true,
-        "x_install_visualCpp": "VC++ Redistributable 설치 체크",
-        "install_visualCpp": false,
-        "x_onlyLauncher": "child App을 호출하는 launcher만 Program Files 폴더에 설치",
-        "onlyLauncher": true,
-        "targets": [
-            "nsis7z"
-        ],
-        "files": [
-            "**/*"
-        ],
+        
+        "빌드 설정": "-----------------------",
+
+        "targets": [ "nsis7z" ],
+        "win": {
+            "exeName": "LauncherApp",
+            "icon": "launcher/assets/favicon.ico",
+
+            "companyName": "tovsoft",
+            "productName": "Launcher App",
+            "programGroupName": "토브소프트",
+            
+            "x_productVersion": "productVersion || version",
+            "x_fileVersion": "fileVersion || nwVersion || productVersion",
+            "fileDescription": "epub 저작 도구",
+            
+            "publisher": "(주) 토브소프트",
+            "copyright": "tovsoft (c) 2020"
+        },
+
+        "nsis": {
+            "theme": "theme",
+            "license": "LICENSE.txt",
+            "web": "https://tovsoft.co.kr/",
+            "diffUpdaters": false
+        },
+
+        "리소스 설정": "-----------------------",
+
+        "files": [ "**/*" ],
         "excludes": [
-            "node_modules",
-            "scriptFileDebug.nsi"
+            "node_modules"
         ],
-        "x_resource": "(생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때. 패키징 폴더에는 제외됨",
         "resource": [
             {
                 "src": "한글 폴더",
@@ -38,56 +60,41 @@
                 "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
             }
         ],
-        "x_uninstall": "uninstall 할때 삭제할 폴더를 추가로 지정할때 (firstrunFolder)",
+
         "uninstall": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun",
-        "x_childApp": "(생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)",
+        
         "childApp": {
-            "x_name": "launcher 폴더의 pckageJson.name",
-            "name": "jikji.new.launcher",
-            "x_nwName": "nw.exe rename 할때 사용할 이름(.exe 생략한 이름 부분). ini 파일에도 file 값에 같은값을 적용해 주어야 함",
             "nwName": "NwApp",
-            "x_excludes": "(생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록",
+            "name": "jikji.new.launcher",
+            "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
+            
             "excludes": [
                 "theme",
                 "LICENSE.txt",
-                "package.json",
-                "uninstall.exe"
+                "onlyLauncher 설정 설명.md"
             ],
-            "x_moves": "(생략 가능) childApp으로 복사 후 패키징 폴더에서 삭제할 목록",
             "moves": [],
-            "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
-            "x_uninstall app": "uninstall 폴더의 package.json 파일 name (uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다)",
-            "x_uninstall app 호출": "install.exe에서 호출되는 uninstall과정에서는 호출 안됨 (uninstall.exe 단독 실행시에만 호출됨)",
+            
             "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall",
-            "x_uninstallAppFolder": "resource로 지정한 폴더와 같게 지정. uninstall app 실행 폴더",
             "uninstallAppFolder": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
         },
-        "associate": [],
-        "x_strippedProperties": "패키징 할때 package json 파일에서 다음 항목들을 누락 시킴",
+
         "strippedProperties": [
             "scripts",
             "dependencies",
             "devDependencies",
             "build"
         ],
-        "win": {
-            "productName": "Launcher App",
-            "companyName": "tovsoft",
-            "x_productVersion": "productVersion || version",
-            "x_fileVersion": "fileVersion || nwVersion || productVersion",
-            "publisher": "(주) 토브소프트",
-            "fileDescription": "epub 저작 도구",
-            "copyright": "tovsoft (c) 2020",
-            "icon": "launcher/assets/favicon.ico",
-            "programGroupName": "토브소프트",
-            "x_exeName": "jikji.editor.launcher.exe 파일의 이름 변경",
-            "exeName": "LauncherApp"
-        },
-        "nsis": {
-            "theme": "theme",
-            "license": "LICENSE.txt",
-            "web": "https://tovsoft.co.kr/",
-            "diffUpdaters": false
-        }
+        
+        "file association 등록 설정": "-----------------------",
+
+        "associate": [
+            {
+                "description": "JIK-JI Editor Project File",
+                "ext": "pdi",
+                "fileClass": "Jik-ji.extTest",
+                "icon": "launcher/assets/favicon.ico"
+            }
+        ]
     }
 }

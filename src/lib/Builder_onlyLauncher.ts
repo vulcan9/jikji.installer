@@ -115,6 +115,8 @@ export class Builder_onlyLauncher extends Builder {
             config.childApp.excludes.push(launcherExe);
             config.childApp.excludes.push(launcherIni);
         }
+        config.childApp.excludes.push('uninstall.exe');
+        config.childApp.excludes.push('package.json');
 
         /**
         # 작업 표시줄 아이콘 안바뀜 현상

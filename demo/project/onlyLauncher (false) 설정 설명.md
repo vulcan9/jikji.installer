@@ -96,9 +96,9 @@ __
         },
         "nsis": {
             // setup 파일 아이콘
-            "icon": "./assets/install.ico",
+            // "icon": "./assets/install.ico",
             // uninstall 파일 아이콘
-            "unIcon": "./assets/uninstall.ico",
+            // "unIcon": "./assets/uninstall.ico",
             "license": "./assets/LICENSE.txt",
             "web": "https://tovsoft.co.kr/",
 
