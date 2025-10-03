@@ -3,13 +3,16 @@
 node_modules
 /packages/nsis-compat-updater/dist
 /packages/nsis-compat-tester/dist
-/assets/project/dist_sample
+
 /caches
-dist
-dist/*
-dist_sample
-certs
+/certs
 
 # 빌드 결과물 제외
-assets/jikji/dist/
-assets/project/dist_sample/
+dist/
+/demo/jikji/dist/
+/demo/project/dist/
+
+
+# 루트에 있는 dist/만 무시 : /dist/
+# 모든 위치의 dist 무시 : dist/
+# 폴더뿐 아니라 파일까지 무시 : dist

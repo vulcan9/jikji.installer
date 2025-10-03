@@ -4,7 +4,7 @@ import { test } from 'ava';
 import { Builder } from '../';
 import { spawnAsync } from '../dist/lib/util';
 
-const dir = './assets/project/';
+const dir = './demo/project/';
 
 test.serial('commandline --concurrent', async (t) => {
 

@@ -15,7 +15,7 @@ const argv = yargs(hideBin(process.argv)).parseSync();
 npmPackage();
 
 function npmPackage(done) {
-    //const folder = './assets/project';
+    //const folder = './demo/project';
     const folder = getArgv('dir', true);
     const isRun = getArgv('run') || false;
 
@@ -36,8 +36,8 @@ function npmPackage(done) {
     args += ' --preserveScript';
     command = 'node "' + command + '"' + args;
 
-    // cd assets/project && npm pack
-    // "cd assets/project" 명령 대신 cwd를 지정함
+    // cd demo/project && npm pack
+    // "cd demo/project" 명령 대신 cwd를 지정함
     const option = {
         shell: true,
         cwd: folder
@@ -74,7 +74,7 @@ function getArgv(name, theowError) {
 // exec
 //--------------------------
 /*
-// "cd assets/project" 명령 대신 cwd를 지정함
+// "cd demo/project" 명령 대신 cwd를 지정함
 execute('dir', {
   shell: true,
   cwd: folder

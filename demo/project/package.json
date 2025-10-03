@@ -27,7 +27,7 @@
     "build": {
         "nwVersion": "0.77.0",
         "nwFlavor": "normal",
-        "output": "./dist_sample",
+        "output": "./dist",
         "outputPattern": "${NAME}-${VERSION} (${PLATFORM} ${ARCH})",
         "packed": false,
         "ffmpegIntegration": true,

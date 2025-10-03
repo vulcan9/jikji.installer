@@ -22,7 +22,7 @@ APP.on('open', function (argString) {
     // --flag-switches-end
     // --nwapp="C:\Program Files (x86)\tovsoft\Test App"
     // --original-process-start-time=13252122332435843
-    // "D:\Jik-ji Project\jikji.installer\dist_sample\ss.ta5"
+    // "D:\Jik-ji Project\jikji.installer\dist\ss.ta5"
 
     var regExp = /(".+?"|[^:\s])+((\s*:\s*(".+?"|[^\s])+)|)|(".+?"|[^"\s])+/img;
     var args = argString.match(regExp) || [];

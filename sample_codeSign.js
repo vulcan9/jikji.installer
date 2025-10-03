@@ -1,12 +1,12 @@
 import fs from 'fs';
-import path, {dirname} from 'path';
+import { fileURLToPath } from "node:url";
+import path, { dirname } from 'path';
 import yargs from 'yargs';
-import {hideBin} from "yargs/helpers";
-import {fileURLToPath} from "node:url";
+import { hideBin } from "yargs/helpers";
 
 // dist 경로의 파일을 참조해야함
 // ./dist/lib/index.js
-import {codeSign, extractPFX, self_certificate} from "./dist/lib/index.js";
+import { codeSign, extractPFX, self_certificate } from "./dist/lib/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = yargs(hideBin(process.argv)).parseSync();
@@ -15,7 +15,7 @@ const argv = yargs(hideBin(process.argv)).parseSync();
 // process.mainModule.paths.unshift(path.resolve(__dirname, 'dist'));
 // process.mainModule.paths.unshift(__dirname);
 
-// const testFile = path.resolve(__dirname, './assets/project/dist_sample/testApp5-0.1.11 (win x86).exe');
+// const testFile = path.resolve(__dirname, './demo/project/dist/testApp5-0.1.11 (win x86).exe');
 // console.error('testFile: ', testFile);
 run_codeSign();
 
@@ -84,7 +84,7 @@ async function run_codeSign() {
     // 테스트용 파일에 코드 서명
     // -----------------------
 
-    // testFile="./assets/project/dist_sample/testApp5-0.1.11 (win x86).exe"
+    // testFile="./demo/project/dist/testApp5-0.1.11 (win x86).exe"
     const file = path.resolve(testFile);
     const ext = path.extname(file);
     // 확장자 제외한 파일명만 추출

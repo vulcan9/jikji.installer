@@ -1,11 +1,11 @@
 # install 파일 생성 샘플 프로젝트
 
 ```
-# 소스 폴더: assets/project 폴더 내용을 install 파일로 만듬
+# 소스 폴더: demo/project 폴더 내용을 install 파일로 만듬
 빌드 실행: npm run sample
 
-# assets/project/package.json의 build.output 설정
-빌드 결과: assets/project/dist_sample
+# demo/project/package.json의 build.output 설정
+빌드 결과: demo/project/dist
 ```
 
 # 디버깅
@@ -37,11 +37,11 @@
 {
     "scripts": {
         "build": "tsc --declaration",
-        "sample": "npm run build && node sample_installer.js --dir=./assets/project",
-        "sampleRun": "npm run build && node sample_installer.js --dir=./assets/project --run",
+        "sample": "npm run build && node sample_installer.js --dir=./demo/project",
+        "sampleRun": "npm run build && node sample_installer.js --dir=./demo/project --run",
         "jikji": "npm run build && node sample_installer.js --dir=./assets/jikji",
         "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
-        "codesign": "npm run build && node sample_codeSign.js --file=\"./assets/project/dist_sample/testApp5-0.1.11 (win x86).exe\""
+        "codesign": "npm run build && node sample_codeSign.js --file=\"./demo/project/dist/testApp5-0.1.11 (win x86).exe\""
     }
 }
 ```
@@ -147,7 +147,7 @@ and use specified mirror to accelerate the download.
 This should be the common use case, read the following Options section and [FAQs](./docs/FAQs.md) if something is
 missing.
 
-See also [sample project](./assets/project/) and [test cases](./test/) for reference.
+See also [sample project](./demo/project/) and [test cases](./test/) for reference.
 
 ## Options
 

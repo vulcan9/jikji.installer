@@ -1,7 +1,7 @@
 
 # Options
 
-Options can be defined in the `package.json` of the project under `build` property, see an [example](../assets/project/package.json).
+Options can be defined in the `package.json` of the project under `build` property, see an [example](../demo/project/package.json).
 
 ## build <- [BuildConfig](../src/lib/config/BuildConfig.ts)
 
