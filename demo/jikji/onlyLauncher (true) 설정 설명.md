@@ -133,6 +133,7 @@ Program Files 폴더에 런처 설치
             // (생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록
             "excludes": [
                 "theme",
+                "association",
                 "LICENSE.txt",
                 "onlyLauncher 설정 설명.md"
                 // 다음 파일들은 자동으로 추가됨

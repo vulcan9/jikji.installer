@@ -2,7 +2,8 @@
     "-": "-----------------------",
     "version": "0.1.0",
     "name": "launcher.sample",
-    "description": "인스톨러 설정",
+    "author": "vulcan9",
+    "description": "인스톨러 설정. onlyLauncher (true) 설정 설명.md 문서를 참조하세요.",
     "--": "-----------------------",
     "build": {
         "onlyLauncher": true,
@@ -70,6 +71,7 @@
             
             "excludes": [
                 "theme",
+                "association",
                 "LICENSE.txt",
                 "onlyLauncher 설정 설명.md"
             ],
@@ -93,7 +95,7 @@
                 "description": "JIK-JI Editor Project File",
                 "ext": "pdi",
                 "fileClass": "Jik-ji.extTest",
-                "icon": "launcher/assets/favicon.ico"
+                "icon": "association/jik.ico"
             }
         ]
     }
