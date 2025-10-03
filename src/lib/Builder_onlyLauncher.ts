@@ -10,27 +10,6 @@ export class Builder_onlyLauncher extends Builder {
 
     constructor(options: IBuilderOptions = {}, public dir: string) {
         super(options, dir);
-
-        // this.options.productName = this.options.productName || 'NO_PRODUCT_NAME';
-        // this.options.companyName = this.options.companyName || 'NO_COMPANY_NAME';
-        // this.options.description = this.options.description || 'NO_DESCRIPTION';
-        // this.options.version = this.options.version || 'NO_PRODUCT_VERSION';
-        // this.options.copyright = this.options.copyright || 'NO_COPYRIGHT';
-        // this.options.publisher = this.options.publisher || 'NO_PUBLISH';
-        //
-        // this.options.exeName = this.options.exeName || 'NO_FILE_NAME';
-        // this.options.programGroupName = this.options.programGroupName || 'NO_PROGRAM_GROUP';
-        //
-        // this.options.compression = this.options.compression || 'lzma';
-        // this.options.solid = Boolean(this.options.solid);
-        // this.options.languages = this.options.languages && this.options.languages.length > 0 ? this.options.languages : ['English'];
-        //
-        // this.fixedVersion = fixWindowsVersion(this.options.version);
-        //
-        // if (this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
-
-        // process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
-
         console.error('Builder_onlyLauncher: ', this.options.destination);
     }
     
@@ -73,30 +52,25 @@ export class Builder_onlyLauncher extends Builder {
             */
         })()
 
+    // console.error('# runtimeDir: ', runtimeDir);
+    // console.error('# appRoot: ', appRoot);
+    // console.error('# runtimeRoot: ', runtimeRoot);
+        console.error('# targetDir: ', targetDir);
+        console.error('# exeName: ', config.win.exeName);
+        
+        
         // 런처먄 설치하므로 package.json 파일은 불필요함
         config.excludes.push('package.json');
         // 기타 배포할 파일들을 복사
         await this.copyFiles(platform, targetDir, appRoot, pkg, config);
 
-        /*
-        //  nw.exe 파일 속성 변경
+        // exe 파일 속성 변경
         await this.prepareWinBuild(targetDir, appRoot, pkg, config);
         // nw.exe 이름 변경
-        await this.renameWinApp(nwRoot, appRoot, pkg, config); 
-        */
+        // await this.renameWinApp(targetDir, appRoot, pkg, config); 
 
-    // console.error('# runtimeDir: ', runtimeDir);
-    // console.error('# appRoot: ', appRoot);
-    // console.error('# runtimeRoot: ', runtimeRoot);
-    // console.error('# targetDir: ', targetDir);
         return targetDir;
     }
-
-    // protected async copyFiles(platform: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-    //     super.copyFiles(platform, targetDir, appRoot, pkg, config);
-
-    //     // uninstall 폴더 위치 설정
-    // }
 
     protected async copyNwFolder(runtimeRoot: string, nwRoot: string) {
         // 불필요한 언어팩을 제외하고 복사
@@ -122,34 +96,52 @@ export class Builder_onlyLauncher extends Builder {
         super.writeStrippedManifest(path, pkg, config);
     }
 
-    /* 
-    //  exe 파일 속성 변경
-    protected updateWinResources(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+    // jikji.editor.launcher.exe 파일의 속성 변경
+    protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+        
+        // 런처 exe 속성 변경
+        const launcherName_origin = 'jikji.editor.launcher';
+        const launcherExe_origin = `${launcherName_origin}.exe`;
+        const launcherIni_origin = `${launcherName_origin}.ini`;
+        // await this.updateWinResources(path.resolve(targetDir, launcherExe_origin), config);
 
-        return new Promise((resolve, reject) => {
+        // 런처 exe 이름 변경
+        const launcherName = config.win.exeName;
+        if (launcherName !== launcherName_origin) {
+            const launcherExe = `${launcherName}.exe`;
+            const launcherIni = `${launcherName}.ini`;
+            await fs.rename(path.resolve(targetDir, launcherExe_origin), path.resolve(targetDir, launcherExe));
+            await fs.rename(path.resolve(targetDir, launcherIni_origin), path.resolve(targetDir, launcherIni));
+            config.childApp.excludes.push(launcherExe);
+            config.childApp.excludes.push(launcherIni);
+        }
 
-            const pathStr = path.resolve(targetDir, 'nw.exe');
-            const rc = {
-                'product-version': fixWindowsVersion(config.win.productVersion),
-                'file-version': fixWindowsVersion(config.win.fileVersion),
-                'version-string': {
-                    ProductName: config.win.productName,
-                    CompanyName: config.win.companyName,
-                    FileDescription: config.win.fileDescription,
-                    LegalCopyright: config.win.copyright,
-                    ...config.win.versionStrings,
-                },
-                'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
-            };
+        /**
+        # 작업 표시줄 아이콘 안바뀜 현상
+        - package.json 파일에 다음 추가
+            "window": { "icon": "assets/favicon.png" },
+            "icons": { "256": "./assets/favicon.png" }
+        - ~\User Data\Default\Web Applications\ 폴더에 아이콘이 바뀌어야 함
+        - (참고) nwJS(8039 이슈) 기본 아이콘으로 표시되는 현상
 
-            // exe 파일에 아이콘 적용
-            rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
-            console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: nw.exe의 코드 사인은 유지되지 않습니다.');
-            
-            // resolve();
-        });
+        # 점프리스트 아이콘 (작업 표시줄 오른클릭 메뉴 리스트의 아이콘) 
+        - %LOCALAPPDATA%\Microsoft\Windows\Explorer 아래 iconcache_*.db 삭제
+        - Explorer 재시작
+        */
+        
+        // nw.exe 속성 변경
+        const nw_origin = 'nw.exe';
+        const nwPath_origin = path.resolve(targetDir, NW_FOLDER_NAME, nw_origin);
+        await this.updateWinResources(nwPath_origin, config);
+
+        // nw.exe 이름 변경
+        const nwName = config.childApp.nwName;
+        const nwNameExe = `${nwName}.exe`;
+        if (nwName && nw_origin !== nwNameExe) {
+            const nwExePath = path.resolve(targetDir, NW_FOLDER_NAME, nwNameExe);
+            await fs.rename(nwPath_origin, nwExePath);
+        }
     }
-    */
 
     /*
     윈도우용만 남겨놓기로...darwin, osx, mac, linux

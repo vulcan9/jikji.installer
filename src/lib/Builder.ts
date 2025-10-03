@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import semver from 'semver';
 
 import createDebug from 'debug';
-import globby from 'globby';
+import { globby } from 'globby';
 import plist from 'plist';
 import rcedit from 'rcedit';
 
@@ -256,27 +256,29 @@ export class Builder {
         return fs.writeFile(path, plist.build(p));
     }
 
-    protected updateWinResources(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+    protected async updateWinResources(exePath: string, config: BuildConfig) {
 
-        return new Promise((resolve, reject) => {
+        let icon = config.win.icon ? path.resolve(this.dir, config.win.icon) : '';
+        icon = icon.replace(/\\/g, '/');
 
-            const pathStr = path.resolve(targetDir, 'nw.exe');
-            const rc = {
-                'product-version': fixWindowsVersion(config.win.productVersion),
-                'file-version': fixWindowsVersion(config.win.fileVersion),
-                'version-string': {
-                    ProductName: config.win.productName,
-                    CompanyName: config.win.companyName,
-                    FileDescription: config.win.fileDescription,
-                    LegalCopyright: config.win.copyright,
-                    ...config.win.versionStrings,
-                },
-                'icon': config.win.icon ? path.resolve(this.dir, config.win.icon) : undefined,
-            };
+        const rc = {
+            'product-version': fixWindowsVersion(config.win.productVersion),
+            'file-version': fixWindowsVersion(config.win.fileVersion),
+            'version-string': {
+                ProductName: config.win.productName,
+                CompanyName: config.win.companyName,
+                FileDescription: config.win.fileDescription,
+                LegalCopyright: config.win.copyright,
+                ...config.win.versionStrings,
+            },
+            'icon': icon,
+        };
 
-            console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: nw.exe의 코드 사인은 유지되지 않습니다.');
-            rcedit(pathStr, rc, (err: Error) => err ? reject(err) : resolve());
-        });
+        console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
+        console.log('\x1b[31m%s\x1b[0m', `\t- exe: ${exePath}`);
+        console.log('\x1b[31m%s\x1b[0m', `\t- icon: ${rc.icon}`);
+        await rcedit(exePath, rc);
+        console.error('# exe 속성 변경: ', exePath);
     }
 
     protected async renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -432,7 +434,8 @@ export class Builder {
     }
 
     protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-        await this.updateWinResources(targetDir, appRoot, pkg, config);
+        const exePath = path.resolve(targetDir, 'nw.exe');
+        await this.updateWinResources(exePath, config);
     }
 
     protected async prepareMacBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {

@@ -79,6 +79,13 @@ FunctionEnd
 
         const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
         const chromeAppDest = childApp.dest ? win32.normalize(childApp.dest) : '';
+        
+        console.log('\n');
+        console.log('* EXE_FILE_NAME: ', this.options.exeName);
+        console.log('* CHROME_APP_LAUNCHER: ', this.options.appName);
+        console.log('* CHROME_APP_CHILD:', chromeAppName);
+        console.log('* CHILD_APP_DEST:', chromeAppDest);
+        console.log('\n');
 
         const excludes = childApp.excludes || [];
         const moves: string[] = childApp.moves || [];
@@ -168,11 +175,6 @@ FunctionEnd
         `;
     }
 
-    /*
-    윈도우용만 남겨놓기로...darwin, osx, mac, linux
-    rcedit icon 변경 skip
-    버전 롤백(리스트) 기능 X
-    */
 }
 
 

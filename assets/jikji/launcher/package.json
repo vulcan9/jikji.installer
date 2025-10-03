@@ -12,6 +12,16 @@
     "main": "index.html",
     "inject_js_start": "launcher.js",
     "window": {
-        "icon": "./assets/favicon.png"
+        "icon": "assets/favicon.png",
+        "frame": false,
+        "show": true,
+        "transparent": false,
+        "fullscreen": false,
+        "width": 400,
+        "height": 200
+    },
+    "x_icons": "nwJS#8039 기본 아이콘으로 표시되는 현상, (./)는 생략해야함",
+    "icons": {
+        "256": "assets/favicon.png"
     }
 }

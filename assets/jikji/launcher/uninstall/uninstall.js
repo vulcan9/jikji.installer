@@ -19,7 +19,7 @@ console.log('argv: ', argv);
 // WIN.showDevTools();
 
 setTimeout(function(){
-    alert('unstall.js 호출됨');
+    alert('삭제할 폴더 정리 후 닫기');
     // process.exit(1);
     nw.App.quit();
 }, 0);

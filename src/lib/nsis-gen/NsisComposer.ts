@@ -43,6 +43,8 @@ export interface INsisComposerOptions {
     // App 복사 기능 지원
     childApp?: {
         name: string,
+        // nw.exe rename 할때 사용할 이름(.exe 생략한 이름 부분)
+        nwName: string,
         excludes?: string[], moves: string[],
         dest: string,
         uninstallApp?: string
@@ -990,7 +992,6 @@ FunctionEnd
 ; 기존에 실행중인 프로그램 종료.
 Function CheckAndCloseApp
     # EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
-    # $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
     StrCpy $1 "${exeFileFullName}"
         
     loop:
@@ -1021,7 +1022,6 @@ FunctionEnd
 ; (uninstall) 기존에 실행중인 프로그램 종료.
 Function un.CheckAndCloseApp
     # EXE_FILE_FULL_NAME 변수가 아직 define 되기 전에 호출될 수도 있으므로 하드 코딩함
-    # $INSTDIR : "C:\\Program Files (x86)\\tovsoft\\Test App"
     StrCpy $1 "${exeFileFullName}"
         
     loop:
@@ -1162,6 +1162,10 @@ FunctionEnd
         // Uninstall App  : childApp의 uninstall 폴더의 package.json 파일 name
         const chromiumUninstallApp = childApp.uninstallApp || '';
         const uninstallAppFolder = childApp.uninstallAppFolder || '\${CHILD_APP_DEST}\\uninstall';
+        
+        const nwName = childApp.nwName || 'nw';
+        const childAppName = this.options.onlyLauncher ? `${nwName}.exe` : '\${EXE_FILE_FULL_NAME}'
+        
         return `
 ;----------------------------------------------------------
 ; App 호출하여 특정 로직을 실행
@@ -1206,10 +1210,10 @@ Function un.ChildAppProcess
         # "C:/Users/pdi10/AppData/Local/jikji.editor.demo.setup/testapp"
         # DetailPrint 'CHILD_APP_DEST: "\${CHILD_APP_DEST}"'
         # "testApp3.exe"
-        # DetailPrint 'EXE_FILE_FULL_NAME: "\${EXE_FILE_FULL_NAME}"'
+        # DetailPrint 'EXE_FILE_FULL_NAME: "${childAppName}"'
         
         Var /GLOBAL childAppPath
-        StrCpy $childAppPath "\${CHILD_APP_DEST}\\\${EXE_FILE_FULL_NAME}"
+        StrCpy $childAppPath "\${CHILD_APP_DEST}\\${childAppName}"
         
         Var /GLOBAL uninstallAppFolder
         # StrCpy $uninstallAppFolder "\${CHILD_APP_DEST}\\uninstall"

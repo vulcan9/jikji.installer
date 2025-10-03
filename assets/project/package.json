@@ -19,6 +19,10 @@
     "window": {
         "icon": "assets/winIcon.png"
     },
+    "x_icons": "nwJS#8039 기본 아이콘으로 표시되는 현상",
+    "icons": {
+        "256": "assets/winIcon.png"
+    },
     "nwjs-builder-phoenix-설정": "(diffUpdaters:true) versions.nsis.json 파일을 유지하면 update.exe 파일이 생성됨",
     "build": {
         "nwVersion": "0.77.0",
