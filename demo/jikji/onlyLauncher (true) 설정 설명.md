@@ -103,7 +103,7 @@ Program Files 폴더에 런처 설치
         // 포함시킬 파일 목록. Defaults to [ '**/*' ]
         "files": [ "**/*" ],
         // 패키징 제외 항목
-        "excludes": [ "node_modules" ],
+        "excludes": [ "theme", "node_modules" ],
         // (생략 가능) 패키징 폴더중 일부를 다른곳에 extract 할때. 패키징 폴더에는 제외됨
         "resource": [
             {

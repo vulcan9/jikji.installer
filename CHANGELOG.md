@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 1.18.11
+
+* Child Uninstall App 종료 보강 (onlyLauncher: true일때)
+    - child uninstall 프로세스가 완료되지 않은 상태이면
+    - app(nwJS) 폴더의 파일 일부가 삭제되지 않음
+
 ### 1.18.3
 
 * Code Sign 적용 기능 추가

@@ -1230,14 +1230,25 @@ Function un.ChildAppProcess
         # child app 호출하여 필요한 uninstall 과정 진행
         # exe 파일을 실행한다. try to launch the process
         #############################################
-        
-        \${StdUtils.ExecShellWaitEx} $0 $1 "$childAppPath" "open" "$uninstallAppFolder"
-        
+
+        ExecWait '"$childAppPath" "$uninstallAppFolder"' $1
+    
+        ; 필요시 약간의 지연 (파일 핸들 완전히 해제 대기)
+        Sleep 1000
+
+        ; ExecWait 결과 확인
+        ; $1 : 프로세스의 exit code (보통 0 = 정상 종료)
+        StrCmp $1 "" ExecFailed  ; 실행 실패 혹은 중간 취소
+
+        DetailPrint "Uninstall child app exited with code: $1"
+        Goto WaitDone
+
+        ; \${StdUtils.ExecShellWaitEx} $0 $1 "$childAppPath" "open" "$uninstallAppFolder"
         # returns "ok", "no_wait" or "error".
-        StrCmp $0 "error" ExecFailed               ;check if process failed to create
-        StrCmp $0 "no_wait" WaitNotPossible        ;check if process can be waited for - always check this!
-        StrCmp $0 "ok" WaitForProc                 ;make sure process was created successfully
-        Abort
+        ; StrCmp $0 "error" ExecFailed               ;check if process failed to create
+        ; StrCmp $0 "no_wait" WaitNotPossible        ;check if process can be waited for - always check this!
+        ; StrCmp $0 "ok" WaitForProc                 ;make sure process was created successfully
+        ; Abort
         
         # 실행 완료 기다리기
         ExecFailed:
@@ -1262,6 +1273,12 @@ Function un.ChildAppProcess
             Goto skipChildProcess
             
     skipChildProcess:
+    
+    ; Child Uninstall App 종료 보강
+    ; 프로세스가 완전히 종료되지 않으면 app(nw) 폴더가 완전히 삭제되지 않음
+    nsProcess::_KillProcess "${childAppName}"
+    Sleep 1000    
+
 FunctionEnd
         `;
     }
