@@ -1,6 +1,7 @@
 /* tslint:disable:no-trailing-whitespace */
 
 import { win32 } from 'path';
+import Ansi from '../../AnsiCode.js';
 import { NW_FOLDER_NAME } from '../Builder_onlyLauncher.js';
 import { INsisComposerOptions, NsisComposer } from './NsisComposer.js';
 
@@ -8,7 +9,6 @@ export class NsisComposer_onlyLauncher extends NsisComposer {
 
     constructor(protected options: INsisComposerOptions) {
         super(options);
-        console.error('onlyLauncher: ', options.onlyLauncher);
     }
 
     // Program Files/ App 설치
@@ -22,8 +22,11 @@ export class NsisComposer_onlyLauncher extends NsisComposer {
         }
         const EXCLUDE_LIST = excludes.map(p => `/x "${win32.normalize(p)}"`).join(' ');
 
-        console.error('# App 제외 목록: \n', EXCLUDE_LIST, '\n');
-        console.error('\n');
+        console.log(Ansi.green);
+        console.log('onlyLauncher: ', this.options.onlyLauncher);
+        console.log('# App 제외 목록: \n', EXCLUDE_LIST, '\n');
+        console.log(Ansi.reset);
+        console.log('\n');
         return `
 ;----------------------------
 ; Launcher App 설치
@@ -81,10 +84,12 @@ FunctionEnd
         const chromeAppDest = childApp.dest ? win32.normalize(childApp.dest) : '';
         
         console.log('\n');
-        console.log('* EXE_FILE_NAME: ', this.options.exeName);
-        console.log('* CHROME_APP_LAUNCHER: ', this.options.appName);
-        console.log('* CHROME_APP_CHILD:', chromeAppName);
-        console.log('* CHILD_APP_DEST:', chromeAppDest);
+        console.log(Ansi.yellow);
+        console.log(`* EXE_FILE_NAME: ${this.options.exeName}`);
+        console.log(`* CHROME_APP_LAUNCHER: ${this.options.appName}`);
+        console.log(`* CHROME_APP_CHILD: ${chromeAppName}`);
+        console.log(`* CHILD_APP_DEST: ${chromeAppDest}`);
+        console.log(Ansi.reset);
         console.log('\n');
 
         const excludes = childApp.excludes || [];
@@ -122,9 +127,11 @@ FunctionEnd
             }).join(' ');
         })();
 
-        console.error('# Child App 리소스 이동: \n', MOVE_LIST);
-        console.error('# Child App 제외 목록: \n', EXCLUDE_LIST, '\n');
-        console.error('\n');
+        console.log(Ansi.green);
+        console.log('# Child App 리소스 이동: \n', MOVE_LIST);
+        console.log('# Child App 제외 목록: \n', EXCLUDE_LIST, '\n');
+        console.log(Ansi.reset);
+        console.log('\n');
 
         return `
 ;----------------------------

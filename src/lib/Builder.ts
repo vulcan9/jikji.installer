@@ -12,6 +12,8 @@ import { Downloader } from './Downloader.js';
 import { FFmpegDownloader } from './FFmpegDownloader.js';
 import { DownloaderBase, NsisVersionInfo } from './common/index.js';
 import { BuildConfig } from './config/index.js';
+
+import Ansi from '../AnsiCode.js';
 import { NsisComposer_onlyLauncher } from './nsis-gen/NsisComposer_onlyLauncher.js';
 import { INsisComposerOptions, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
 import {
@@ -274,11 +276,14 @@ export class Builder {
             'icon': icon,
         };
 
-        console.log('\x1b[31m%s\x1b[0m', '# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
-        console.log('\x1b[31m%s\x1b[0m', `\t- exe: ${exePath}`);
-        console.log('\x1b[31m%s\x1b[0m', `\t- icon: ${rc.icon}`);
+        console.log(Ansi.magenta);
+        console.log('# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
+        console.log(`\t- exe: ${exePath}`);
+        console.log(`\t- icon: ${rc.icon}`);
+        console.log(Ansi.reset);
+
         await rcedit(exePath, rc);
-        console.error('# exe 속성 변경: ', exePath);
+        console.log(Ansi.yellow, `# exe 속성 변경: ${exePath}`, Ansi.reset);
     }
 
     protected async renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -884,11 +889,11 @@ export class Builder {
         }
 
         if (sourceArchive && !this.options.preserveArchive) {
-            console.log('# 7z 파일 삭제 (--preserveArchive): ', sourceArchive);
+            console.log(Ansi.yellow, `# 7z 파일 삭제 (--preserveArchive): ${sourceArchive}`, Ansi.reset);
             await fs.remove(sourceArchive);
         }
         if (!this.options.preserveSource) {
-            console.log('# 소스 폴더 삭제 (--preserveSource): ', sourceDir);
+            console.log(Ansi.yellow, `# 소스 폴더 삭제 (--preserveSource): ${sourceDir}`, Ansi.reset);
             await fs.remove(sourceDir);
         }
     }

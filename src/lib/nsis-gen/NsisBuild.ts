@@ -2,6 +2,8 @@ import { spawn } from 'child_process';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'node:url';
 import path from 'path';
+import Ansi from '../../AnsiCode.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const DIR_VENDER = path.resolve(path.dirname(__filename), '../../../vender/');
@@ -18,7 +20,7 @@ export async function nsisBuild(cwd: string, script: string, options: INsisBuild
     output: '',
     preserveScript: false
 }) {
-    console.log('# NSIS 스크립트 파일 : ', script);
+    console.log(Ansi.yellow, `# NSIS 스크립트 파일 : ${script}`, Ansi.reset);
 
     const args = [
         path.win32.normalize(
@@ -43,9 +45,11 @@ export async function nsisBuild(cwd: string, script: string, options: INsisBuild
             if (!options.preserveScript) removeScript(script);
             if (code !== 0) return reject(new Error(`ERROR_EXIT_CODE code = ${code}`));
 
-            console.log('\x1b[31m%s\x1b[0m', '# 코드 사인은 자동화되지 않았습니다.');
-            console.log('\x1b[31m%s\x1b[0m', '# 설치 파일은 USB 토큰을 통해 직접 코드 서명하셔야 합니다.');
-            console.log('\x1b[31m%s\x1b[0m', '# (주의. rcedit) nw.exe도 아이콘 변조로 인해 다시 서명해야 함.');
+            console.log(Ansi.magenta);
+            console.log('# 코드 사인은 자동화되지 않았습니다.');
+            console.log('# 설치 파일은 USB 토큰을 통해 직접 코드 서명하셔야 합니다.');
+            console.log('# (주의. rcedit) nw.exe도 아이콘 변조로 인해 다시 서명해야 함.');
+            console.log(Ansi.reset);
             // TODO: codeSign({});
 
             resolve({code, signal});

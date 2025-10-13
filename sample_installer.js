@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path, { dirname } from 'path';
 import yargs from 'yargs';
 import { hideBin } from "yargs/helpers";
+import Ansi from "./dist/AnsiCode.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = yargs(hideBin(process.argv)).parseSync();
@@ -43,8 +44,6 @@ function npmPackage(done) {
         cwd: folder
     };
     execute(command, option, function () {
-        console.log('# 패키지 완료');
-        console.log('');
         if (done) done();
     });
 }
@@ -87,21 +86,23 @@ function execute(command, options, cb) {
     if (options.shell === undefined) options.shell = true;
 
     // 실시간 로그 표시
-    // ANSI 코드 직접 사용
-    // \x1b[32m: 초록색 시작
-    // \x1b[31m: 빨강 시작
-    // \x1b[0m: 리셋
     var child = exec(command, options, function (error, stdout, stderr) {
         if (error !== null) console.log('exec error: ', error);
-        if (stdout) console.log('\x1b[32m%s\x1b[0m', stdout);
-        if (stderr) console.log('\x1b[31m%s\x1b[0m', stderr);
-        if (cb) cb();
+        if (stdout) console.log(stdout);
+        if (stderr) console.log(Ansi.red, stderr);
+
+        console.log(Ansi.green);
+        if (cb) {
+            console.log('# 패키지 완료');
+            cb();
+        }
     });
     // child.stdout.setEncoding('utf8');
     // child.stdout.pipe(process.stdout);
 
     child.on('close', function (code) {
-        console.log('# child process 닫기 ' + code);
+        console.log('# child process 닫기: ' + code);
+        console.log(Ansi.reset);
     });
 }
 

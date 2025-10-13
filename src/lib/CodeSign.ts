@@ -1,8 +1,9 @@
-import path from 'path';
 import fs from 'fs-extra';
 import { execSync } from 'node:child_process';
-import { CodeSignToolDownloader } from './CodeSignToolDownloader.js';
 import * as os from 'node:os';
+import path from 'path';
+import Ansi from '../AnsiCode.js';
+import { CodeSignToolDownloader } from './CodeSignToolDownloader.js';
 
 function toPowershell(args: string[]) {
     const cmd = args.join(' ').replace(/"/g, '\\"');
@@ -12,14 +13,9 @@ function toPowershell(args: string[]) {
 }
 
 function help(ar: string[]) {
-    // ANSI 코드 직접 사용
-    // \x1b[32m: 초록색 시작
-    // \x1b[31m: 빨강 시작
-    // \x1b[0m: 리셋
-    // console.error('\x1b[32m%s\x1b[0m', '내용')
     ar.forEach((log) => {
         // console.log(`%c${log}`, 'color:green');
-        console.log('\x1b[32m%s\x1b[0m', log);
+        console.log(Ansi.green, log);
     });
 }
 

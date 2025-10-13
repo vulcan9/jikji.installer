@@ -1,5 +1,6 @@
 import fs from "fs-extra";
 import path from "path";
+import Ansi from "../AnsiCode.js";
 import { Builder, IBuilderOptions } from "./Builder.js";
 import { BuildConfig } from "./config/BuildConfig.js";
 import { findRuntimeRoot } from "./util/index.js";
@@ -10,7 +11,6 @@ export class Builder_onlyLauncher extends Builder {
 
     constructor(options: IBuilderOptions = {}, public dir: string) {
         super(options, dir);
-        console.error('Builder_onlyLauncher: ', this.options.destination);
     }
     
     // const sourceDir = await this.buildDirTarget(platform, arch, runtimeDir, pkg, config);
@@ -52,11 +52,14 @@ export class Builder_onlyLauncher extends Builder {
             */
         })()
 
-    // console.error('# runtimeDir: ', runtimeDir);
-    // console.error('# appRoot: ', appRoot);
-    // console.error('# runtimeRoot: ', runtimeRoot);
-        console.error('# targetDir: ', targetDir);
-        console.error('# exeName: ', config.win.exeName);
+        console.log(Ansi.green);
+        console.log('# Builder_onlyLauncher: ', this.options.destination);
+    // console.log('# runtimeDir: ', runtimeDir);
+    // console.log('# appRoot: ', appRoot);
+    // console.log('# runtimeRoot: ', runtimeRoot);
+        console.log('# targetDir: ', targetDir);
+        console.log('# exeName: ', config.win.exeName);
+        console.log(Ansi.reset);
         
         
         // 런처먄 설치하므로 package.json 파일은 불필요함
