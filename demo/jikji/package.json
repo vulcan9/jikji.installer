@@ -10,6 +10,12 @@
         "install_visualCpp": false,
         "ffmpegIntegration": true,
         
+        "CodeSign 설정": "SafeNet Authentication Client",
+
+        "codesign": {
+            "tockenName": "tovsoft co.,Ltd"
+        },
+
         "기본 설정": "-----------------------",
 
         "nwVersion": "0.77.0",
