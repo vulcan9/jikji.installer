@@ -6,7 +6,8 @@ import { hideBin } from "yargs/helpers";
 
 // dist 경로의 파일을 참조해야함
 // ./dist/lib/index.js
-import { codeSign, extractPFX, self_certificate } from "./dist/lib/index.js";
+import Ansi from './dist/AnsiCode.js';
+import { codeSign } from "./dist/lib/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const argv = yargs(hideBin(process.argv)).parseSync();
@@ -15,9 +16,12 @@ const argv = yargs(hideBin(process.argv)).parseSync();
 // process.mainModule.paths.unshift(path.resolve(__dirname, 'dist'));
 // process.mainModule.paths.unshift(__dirname);
 
-// const testFile = path.resolve(__dirname, './demo/project/dist/testApp5-0.1.11 (win x86).exe');
-// console.error('testFile: ', testFile);
-run_codeSign();
+run_codeSign({
+    // USB 토큰 비밀번호 입력창이 뜸
+    // password: '---',
+    // 인증서의 게시자명(발급대상)
+    tockenName: 'tovsoft co.,Ltd'
+});
 
 //--------------------------
 // command-line arguments 파싱
@@ -42,10 +46,15 @@ function getArgv(name, theowError) {
     return isNaN(value) ? value : Number(value);
 }
 
-async function run_codeSign() {
-
+async function run_codeSign(option) {
+    
     const testFile = getArgv('file', true);
-    console.error('테스트 파일 : ', testFile);
+    // const tockenName = getArgv('tocken', true);
+
+    console.log(Ansi.green);
+    console.log('# 테스트 파일: ', path.resolve(__dirname, testFile));
+    console.log(Ansi.reset);
+    
     try {
         fs.accessSync(testFile, fs.constants.F_OK);
     } catch (err) {
@@ -53,32 +62,6 @@ async function run_codeSign() {
         console.error(`❌  "npm run sample" 실행하여 exe 파일을 먼저 만드세요.`);
         return;
     }
-
-    // -----------------------
-    // 테스트용 인증서 확인 (생성)
-    // -----------------------
-
-    const certOptions = {
-        // 인증서의 이름
-        certName: 'SelfSigned_테스트',
-        // 인증서 저장소
-        certPath: 'Cert:\\CurrentUser\\My'
-    };
-    self_certificate(certOptions);
-
-    // -----------------------
-    // 테스트용 pfx 파일 확인 (생성)
-    // -----------------------
-
-    // PFX 비밀번호
-    const password = '1234';
-
-    const pfxPath = extractPFX({
-        password,
-        ...certOptions,
-        // PFX 파일 저장 경로
-        outputFolder: path.resolve(__dirname, 'certs')
-    });
 
     // -----------------------
     // 테스트용 파일에 코드 서명
@@ -91,23 +74,18 @@ async function run_codeSign() {
     const fileName = path.basename(file, ext);
     const output = path.join(path.dirname(file), `${fileName}-sined${ext}`);
 
-    await codeSign({
-        pfxPath,
-        password,
+    const commonOption = {
         // 코드사인을 적용할 exe, dll 파일
         target: file,
         // 코드사인을 적용한 파일 경로
         // - output 설정하지 않으면 원본에 사인
         // - 설정하면 복사본에 사인
         output
+    };
+    await codeSign({
+        ...commonOption,
+        ...option
     });
-
-    // -----------------------
-    // 인증서를 로컬 신뢰 루트 저장소에 설치
-    // -----------------------
-    
-    // `SmartScreen/UAC` 경고 제거 테스트까지 하고 싶다면, 직접 루트 저장소에 등록
-    // certutil -addstore "Root" C:\certs\mytest.cer
 
     console.error('\n# EXIT\n');
 }

@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from "node:url";
 import path, { dirname } from 'path';
 import yargs from 'yargs';
@@ -84,9 +84,10 @@ function execute(command, options, cb) {
     console.log('# ', command);
     options = options || {};
     if (options.shell === undefined) options.shell = true;
+    if (options.stdio === undefined) options.stdio = 'inherit';
 
     // 실시간 로그 표시
-    var child = exec(command, options, function (error, stdout, stderr) {
+    var child = spawn(command, options, function (error, stdout, stderr) {
         if (error !== null) console.log('exec error: ', error);
         if (stdout) console.log(stdout);
         if (stderr) console.log(Ansi.red, stderr);

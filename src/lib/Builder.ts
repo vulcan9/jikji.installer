@@ -598,8 +598,8 @@ export class Builder {
             childApp: config.childApp,
             resource: config.resource,
             uninstall: config.uninstall,
-            associate: config.associate
-
+            associate: config.associate,
+            nwFolderName: config.nwFolderName
         };
     }
 

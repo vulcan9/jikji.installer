@@ -5,8 +5,6 @@ import { Builder, IBuilderOptions } from "./Builder.js";
 import { BuildConfig } from "./config/BuildConfig.js";
 import { findRuntimeRoot } from "./util/index.js";
 
-export const NW_FOLDER_NAME = 'nw';
-
 export class Builder_onlyLauncher extends Builder {
 
     constructor(options: IBuilderOptions = {}, public dir: string) {
@@ -33,7 +31,7 @@ export class Builder_onlyLauncher extends Builder {
 
         // 불필요한 언어팩을 제외하고 복사
         // 임시 nwJS 폴더 경로
-        const nwRoot = path.resolve(targetDir, NW_FOLDER_NAME);
+        const nwRoot = path.resolve(targetDir, config.nwFolderName);
         await (async () => {
             await this.copyNwFolder(runtimeRoot, nwRoot);
             if (config.ffmpegIntegration) {
@@ -136,14 +134,14 @@ export class Builder_onlyLauncher extends Builder {
         
         // nw.exe 속성 변경
         const nw_origin = 'nw.exe';
-        const nwPath_origin = path.resolve(targetDir, NW_FOLDER_NAME, nw_origin);
+        const nwPath_origin = path.resolve(targetDir, config.nwFolderName, nw_origin);
         await this.updateWinResources(nwPath_origin, config);
 
         // nw.exe 이름 변경
         const nwName = config.childApp.nwName;
         const nwNameExe = `${nwName}.exe`;
         if (nwName && nw_origin !== nwNameExe) {
-            const nwExePath = path.resolve(targetDir, NW_FOLDER_NAME, nwNameExe);
+            const nwExePath = path.resolve(targetDir, config.nwFolderName, nwNameExe);
             await fs.rename(nwPath_origin, nwExePath);
         }
     }

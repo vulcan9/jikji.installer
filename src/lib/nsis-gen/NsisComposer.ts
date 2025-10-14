@@ -52,6 +52,9 @@ export interface INsisComposerOptions {
     };
     appName: string;
     // nwFiles: string[];
+    
+    // nwJS 리소스 복사할 폴더명
+    nwFolderName: string;
 }
 
 /***********************************************

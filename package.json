@@ -33,7 +33,8 @@
         "sample": "npm run build && node sample_installer.js --dir=./demo/project",
         "jikji": "npm run build && node sample_installer.js --dir=./demo/jikji",
         "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
-        "codesign": "npm run build && node sample_codeSign.js --file=\"./demo/project/dist/testApp5-0.1.11 (win x86).exe\""
+        "codesignPfx": "npm run build && node sample_codeSign_self.js --file=\"./demo/jikji/dist/nw.exe\"",
+        "codesignTocken": "npm run build && node sample_codeSign_usb.js --file=\"./demo/jikji/dist/nw.exe\""
     },
     "repository": {
         "type": "git",

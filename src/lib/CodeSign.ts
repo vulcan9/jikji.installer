@@ -14,8 +14,7 @@ function toPowershell(args: string[]) {
 
 function help(ar: string[]) {
     ar.forEach((log) => {
-        // console.log(`%c${log}`, 'color:green');
-        console.log(Ansi.green, log);
+        console.log(Ansi.green, log, Ansi.reset);
     });
 }
 
@@ -147,8 +146,17 @@ export function extractPFX(options: ExportOptions) {
 // -------------------------------------------
 
 type SignOptions = {
-    pfxPath: string,
+    // pfx 파일로 방식으로 서명 시도
+    pfxPath?: string,
     password: string,
+
+    // usb tocken 방식으로 서명 시도
+    tockenName?: string,
+
+    // 아래는 공통
+
+    // signtool exe 경로
+    signtoolPath?: string,
     timeStamp?: string,
     // 코드사인을 적용할 exe, dll 파일
     target: string,
@@ -168,10 +176,203 @@ export async function codeSign(options: SignOptions) {
 
     // SDK 설치 상태 체크
     await checkCodeSignTool();
+    options.signtoolPath || (options.signtoolPath = findSigntoolPath());
+    
+    // 서명할 대상 파일 (빌드 결과물 exe/msi, dll, ...)
+    const {
+        target,
+        output
+    } = options;
+    console.log(`\n# 코드 사인 준비중 ...`);
+    console.log('(코드 사인) target: ', target);
+    console.log('(코드 사인) output: ', output);
 
-    // signtool로 서명하기
-    await sign(options);
+    let tempPath;
+    try {
+        if (output && output !== target) {
+            await fs.copy(target, output, { overwrite: true });
+            tempPath = output;
+        }
+        options.output = output || target;
+
+        // signtool로 서명하기
+        if (options.pfxPath) return await sign_pfx(options);
+        if (options.tockenName) return await sign_tocken(options);
+        throw new Error('전달된 signtool로 서명하기 옵션이 부족합니다.');
+
+    } catch (err: any) {
+        console.error('❌  코드 사인 실패:', err.message);
+        if (tempPath) fs.removeSync(tempPath);
+        process.exit(1);
+    }
 }
+
+function helper(outputPath, certName) {
+    const fileName = path.basename(outputPath);
+    help([
+        '# 서명 결과 확인',
+        `\t- ${fileName} 파일의 속성 > 디지털 서명 탭 > ${certName} 인증서 확인`,
+        '\t- (테스트 인증서일때) 신뢰 기관에 등록되지 않은 인증서이므로 (SmartScreen/UAC)에서는 여전히 "알 수 없는 게시자"로 뜸.',
+        '\t- 신뢰 기관에 등록된 인증서 사용하면 "알 수 없는 게시자" 경고가 사라짐'
+    ]);
+}
+    
+// -------------------------------------------
+// signtool로 서명 (HSM / USB Tocken)
+// -------------------------------------------
+
+/*
+HSM / USB 토큰(예: SafeNet, eToken) 사용 시:
+토큰용 SafeNet 미들웨어(드라이버) 를 반드시 설치되어 있어야 함
+
+signtool.exe sign 
+    /a                                     # 서명할 때 인증서를 자동으로 선택
+    /s my                                  # 인증서 저장소(store) 지정
+    /n "인증서의 게시자명(발급대상)"       # SafeNet에서 확인되는 인증서명(발급대상)
+    /tr http://timestamp.digicert.com      # RFC 3161 (RFC-3161) 규격의 타임스탬프를 요청
+    /td sha256                             # 타임스탬프에 사용할 해시 알고리즘(예: SHA256)을 지정
+    /fd sha256                             # 실제 파일 서명(Authenticode 서명)에서 사용할 해시 알고리즘
+    /v                                     # Verbose 모드. 동작 로그를 상세하게 출력
+    "서명할 파일명"
+*/
+async function sign_tocken(options: SignOptions) {
+    const {
+        tockenName,
+        // 공통 옵션
+        signtoolPath,
+        timeStamp = 'http://timestamp.digicert.com',
+        // 서명할 대상 파일 (빌드 결과물 exe/msi)
+        target,
+        output
+    } = options;
+    
+    help([
+        '',
+        '# Token Single Logon 기능 안내',
+        `\t- 서명할때 USB 토큰 비밀번호 입력창이 매번 뜨는데`,
+        '\t- Token Single Logon 기능을 이용하면 처음 로그온 설정 시에만 패스워드 입력한 후',
+        '\t- 개별 파일 서명 시에는 패스워드 입력없이 처리 가능 함',
+        '',
+        '* SafeNet Authentication Client 실행',
+        '\t- 설정 아이콘 클릭 > (왼쪽 Tree) 클라이언트 설정 > 싱글 로그온 사용 모두 체크 > 저장',
+        '\t- 처음 토큰 비밀번호 입력 이후 계속 사용 가능함',
+        '\t- 처음 토큰 비밀번호 입력 이후 계속 사용 가능함',
+        '',
+        '(참고) 코드사인 인증서 적용 (EV).md',
+        '(참고) Token Single Logon.pdf',
+        ''
+    ]);
+
+    // 경로에 공백이 있는 실행 파일은 & 연산자를 사용
+    const outputPath = output || target;
+    let command = toPowershell([
+        `& '${signtoolPath}' sign /a /s my`,
+        `/n '${tockenName}' `,
+        
+        `/tr '${timeStamp}' `,
+        '/td sha256',
+        '/fd sha256',
+        '/v',
+        `'${outputPath}'`
+    ]);
+
+    execSync(command, { stdio: 'inherit' });
+    
+    console.log('✅  코드 사인 성공!');
+    helper(outputPath, tockenName);
+}
+
+// -------------------------------------------
+// signtool로 서명 (pfx)
+// -------------------------------------------
+
+/*
+signtool sign
+         /f C:\certs\mytest.pfx
+         /p 비밀번호
+         /tr http://timestamp.digicert.com
+         /td sha256 
+         /fd sha256 
+         "dist\myapp.exe"
+*/
+async function sign_pfx(options: SignOptions) {
+    const {
+        pfxPath,
+        password,
+
+        // 공통 옵션
+        signtoolPath,
+        timeStamp = 'http://timestamp.digicert.com',
+        // 서명할 대상 파일 (빌드 결과물 exe/msi)
+        target,
+        output
+    } = options;
+
+    if (!pfxPath) {
+        console.error('❌  pfx 파일이 없습니다.');
+        return;
+    }
+
+    // 경로에 공백이 있는 실행 파일은 & 연산자를 사용
+    const outputPath = output || target;
+    let command = toPowershell([
+        `& '${signtoolPath}' sign /f '${pfxPath}'`,
+        `/p '${password}' `,
+        `/tr '${timeStamp}' `,
+        '/td sha256',
+        '/fd sha256',
+        `'${outputPath}'`
+    ]);
+
+    execSync(command, {stdio: 'inherit'});
+    // rename
+    // if (output) await fs.move(target, output, {overwrite: true});
+    
+    const certName = path.basename(pfxPath, path.extname(pfxPath));
+    helper(outputPath, certName);
+}
+
+// signtool 경로 자동 탐색하기
+function findSigntoolPath(): string {
+    // 환경변수로 지정되어 있으면 우선 사용
+    if (process.env.SIGNTOOL_PATH) return process.env.SIGNTOOL_PATH;
+
+    const base = WIN_11_SDK_DIR;
+    if (!fs.existsSync(base)) throw new Error('Windows SDK not found. Please install Windows 10/11 SDK.');
+
+    // bin 안에 있는 버전 목록
+    const versions = fs.readdirSync(base).filter((dir) => /^\d+\.\d+\.\d+\.\d+$/.test(dir));
+    if (versions.length === 0) throw new Error('No Windows SDK versions found under ' + base);
+
+    // 가장 최신 버전 선택
+    versions.sort((a, b) => (a > b ? 1 : -1));
+    const latest = versions[versions.length - 1];
+
+    const arch = handleArch();
+    const signtoolPath = path.join(base, latest, arch, 'signtool.exe');
+    if (!fs.existsSync(signtoolPath)) throw new Error('signtool.exe not found in ' + signtoolPath);
+
+    return signtoolPath;
+}
+
+function handleArch() {
+    const arch: string = os.arch();
+    switch (arch) {
+        case 'x86':
+        case 'ia32':
+            return 'x86';
+        case 'x64':
+            return 'x64';
+        case 'arm64':
+            return 'arm64';
+        default:
+            throw new Error('ERROR_UNKNOWN_PLATFORM');
+    }
+}
+
+// -------------------------------------------
+// SDK 설치 확인
+// -------------------------------------------
 
 // SDK 설치 확인 경로
 const WIN_11_SDK_DIR = 'C:\\Program Files (x86)\\Windows Kits\\10\\bin';
@@ -246,112 +447,5 @@ async function checkCodeSignTool() {
             '\t- (선택) Windows App Certification Kit (테스트용으로 앱 유효성 검사할 때 필요. 단순히 코드 서명만 한다면 생략 가능)',
             '\t- (선택) Application Verifier for Windows (런타임 동작 테스트용. 코드 서명과는 무관. 필요 없다면 해제해도 됨)',
         ]);
-    }
-}
-
-// signtool로 서명
-/*
-signtool sign
-         /f C:\certs\mytest.pfx
-         /p 비밀번호
-         /fd sha256 /tr http://timestamp.digicert.com
-         /td sha256 dist\myapp.exe
-*/
-async function sign(options: SignOptions) {
-    const {
-        pfxPath,
-        password,
-        timeStamp = 'http://timestamp.digicert.com',
-        // 서명할 대상 파일 (빌드 결과물 exe/msi)
-        target,
-        output
-    } = options;
-
-    console.log(`\n# 코드 사인 준비중 ...`);
-    console.log('(코드 사인) target: ', target);
-    console.log('(코드 사인) output: ', output);
-
-    if (!pfxPath) {
-        console.error('❌  pfx 파일이 없습니다.');
-        return;
-    }
-
-    try {
-        const signtoolPath = findSigntoolPath();
-
-        const outputPath = output || target;
-        if (output && output !== target) {
-            await fs.copy(target, output, {overwrite: true});
-        }
-
-        // 경로에 공백이 있는 실행 파일은 & 연산자를 사용
-        let command = toPowershell([
-            `& '${signtoolPath}' sign /f '${pfxPath}'`,
-            `/p '${password}' `,
-            `/tr '${timeStamp}' `,
-            '/td sha256',
-            '/fd sha256',
-            `'${outputPath}'`
-        ]);
-
-        execSync(command, {stdio: 'inherit'});
-        console.log('✅  코드 사인 성공!');
-        // rename
-        // if (output) await fs.move(target, output, {overwrite: true});
-        helper(outputPath, pfxPath);
-
-    } catch (err: any) {
-        console.error('❌  코드 사인 실패:', err.message);
-        process.exit(1);
-    }
-
-    function helper(outputPath, pfxPath) {
-        const fileName = path.basename(outputPath);
-        const certName = path.basename(pfxPath, path.extname(pfxPath));
-        help([
-            '# 서명 결과 확인',
-            `\t- ${fileName} 파일의 속성 > 디지털 서명 탭 > ${certName} 인증서 확인`,
-            '\t- (테스트 인증서일때) 신뢰 기관에 등록되지 않은 인증서이므로 (SmartScreen/UAC)에서는 여전히 "알 수 없는 게시자"로 뜸.',
-            '\t- 신뢰 기관에 등록된 인증서 사용하면 "알 수 없는 게시자" 경고가 사라짐'
-        ]);
-
-    }
-}
-
-// signtool 경로 자동 탐색하기
-function findSigntoolPath(): string {
-    // 환경변수로 지정되어 있으면 우선 사용
-    if (process.env.SIGNTOOL_PATH) return process.env.SIGNTOOL_PATH;
-
-    const base = WIN_11_SDK_DIR;
-    if (!fs.existsSync(base)) throw new Error('Windows SDK not found. Please install Windows 10/11 SDK.');
-
-    // bin 안에 있는 버전 목록
-    const versions = fs.readdirSync(base).filter((dir) => /^\d+\.\d+\.\d+\.\d+$/.test(dir));
-    if (versions.length === 0) throw new Error('No Windows SDK versions found under ' + base);
-
-    // 가장 최신 버전 선택
-    versions.sort((a, b) => (a > b ? 1 : -1));
-    const latest = versions[versions.length - 1];
-
-    const arch = handleArch();
-    const signtoolPath = path.join(base, latest, arch, 'signtool.exe');
-    if (!fs.existsSync(signtoolPath)) throw new Error('signtool.exe not found in ' + signtoolPath);
-
-    return signtoolPath;
-}
-
-function handleArch() {
-    const arch: string = os.arch();
-    switch (arch) {
-        case 'x86':
-        case 'ia32':
-            return 'x86';
-        case 'x64':
-            return 'x64';
-        case 'arm64':
-            return 'arm64';
-        default:
-            throw new Error('ERROR_UNKNOWN_PLATFORM');
     }
 }

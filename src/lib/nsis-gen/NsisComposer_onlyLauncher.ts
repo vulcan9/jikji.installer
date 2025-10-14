@@ -2,7 +2,6 @@
 
 import { win32 } from 'path';
 import Ansi from '../../AnsiCode.js';
-import { NW_FOLDER_NAME } from '../Builder_onlyLauncher.js';
 import { INsisComposerOptions, NsisComposer } from './NsisComposer.js';
 
 export class NsisComposer_onlyLauncher extends NsisComposer {
@@ -15,7 +14,7 @@ export class NsisComposer_onlyLauncher extends NsisComposer {
     protected async installAppLauncher(): Promise<string> {
         // 제외 목록 (nw 폴더는 child app으로 설치)
         let excludes: string[] = [
-            NW_FOLDER_NAME
+            this.options.nwFolderName
         ];
         if (this.options.resource) {
             excludes = excludes.concat(this.options.resource.map(p => p.src));
@@ -70,6 +69,7 @@ FunctionEnd
     
     // AppData/Local/ child App 설치
     protected async installChildApp(): Promise<string> {
+        const nwFolderName = this.options.nwFolderName;
         const childApp = this.options.childApp;
         if (!childApp || !childApp.dest) {
             return `
@@ -157,7 +157,7 @@ FunctionEnd
         SetOutPath $9
 
         # nwJS 설치
-        File /nonfatal /a /r ${NW_FOLDER_NAME}\\*.*
+        File /nonfatal /a /r ${nwFolderName}\\*.*
         
         # moves 목록 따로 처리
         # File /nonfatal /a /r "uninstall"
