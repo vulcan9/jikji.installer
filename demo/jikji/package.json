@@ -5,7 +5,10 @@
     "author": "vulcan9",
     "description": "인스톨러 설정. onlyLauncher (true) 설정 설명.md 문서를 참조하세요.",
     "--": "-----------------------",
+
     "build": {
+        "appId": "jikji.new.name",
+        
         "onlyLauncher": true,
         "install_visualCpp": false,
         "ffmpegIntegration": true,
@@ -60,24 +63,24 @@
         "resource": [
             {
                 "src": "한글 폴더",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun/한글 폴더"
+                "dest": "$APP_PATH/firstrun/한글 폴더"
             },
             {
                 "src": "launcher",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
+                "dest": "$APP_PATH/launcher"
             },
             {
                 "src": "uninstall",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
+                "dest": "$APP_PATH/launcher/uninstall"
             }
         ],
 
-        "uninstall": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun",
+        "uninstall": "$APP_PATH/firstrun",
         
         "childApp": {
-            "nwName": "NwAppTest",
-            "name": "jikji.new.launcher",
-            "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
+            "nwName": "exe 이름 변경",
+            "name": "jikji.new.name.launcher",
+            "dest": "$APP_PATH/app",
             
             "excludes": [
                 "theme",
@@ -87,8 +90,8 @@
             ],
             "moves": [],
             
-            "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall",
-            "uninstallAppFolder": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
+            "uninstallApp": "$LOCALAPPDATA/jikji.new.name.uninstall",
+            "uninstallAppFolder": "$APP_PATH/launcher/uninstall"
         },
 
         "strippedProperties": [

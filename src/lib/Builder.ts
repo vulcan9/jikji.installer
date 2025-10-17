@@ -634,8 +634,10 @@ export class Builder {
             // Output.
             output: config.output,
             // output: targetNsis,
-            appName: config.appName,
+            appId: config.appId,
+            setupFolderName: config.setupFolderName,
             childApp: config.childApp,
+
             resource: config.resource,
             uninstall: config.uninstall,
             associate: config.associate,

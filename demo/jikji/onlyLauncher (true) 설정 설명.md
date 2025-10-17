@@ -27,6 +27,10 @@ Program Files 폴더에 런처 설치
     
     "--": "-----------------------",
 
+    // 런처가 최종적으로 로드할 nw app의 package.name
+    // setup 폴더 이름에도 사용됨 (jikji.new.nam.setup)
+    "appId": "jikji.new.name",
+
     "build": {
         // child App을 호출하는 launcher만 Program Files 폴더에 설치
         "onlyLauncher": true,
@@ -129,32 +133,32 @@ Program Files 폴더에 런처 설치
         "resource": [
             {
                 "src": "한글 폴더",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun/한글 폴더"
+                "dest": "$APP_PATH/firstrun/한글 폴더"
             },
             {
                 "src": "launcher",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
+                "dest": "$APP_PATH/launcher"
             },
             {
                 "src": "uninstall",
-                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
+                "dest": "$APP_PATH/launcher/uninstall"
             }
         ],
         
         // uninstall 할때 삭제할 폴더를 추가로 지정할때 (firstrunFolder)
-        "uninstall": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun",
+        "uninstall": "$APP_PATH/firstrun",
 
         // (생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)
         "childApp": {
             // nw.exe rename 할때 사용할 이름(.exe 생략한 이름 부분).
             // jikji.editor.launcher.ini 파일에도 file 값에 같은값을 적용해 주어야 함 (##__nwExeName__## 치환됨)
-            "nwName": "NwApp",
+            "nwName": "NwAppTest",
 
             // launcher, uninstall 폴더의 pckageJson.name
             // (##__PackageJsonAppName_## 치환됨)
-            "name": "jikji.new.launcher",
+            "name": "jikji.new.name.launcher",
             // childApp이 설치될 위치
-            "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
+            "dest": "$APP_PATH/app",
 
             // (생략 가능) 패키징 폴더에는 있지만 child에는 복사하지 않을 목록
             "excludes": [
@@ -174,10 +178,10 @@ Program Files 폴더에 런처 설치
             // - uninstallApp이 지정되면 uninstall 폴더의 앱이 호출된다
             // - install.exe에서 호출되는 uninstall 과정에서는 호출 안됨
             // - 프로그램 제거 또는 uninstall.exe 단독 실행시에만 호출됨
-            "uninstallApp": "$LOCALAPPDATA/jikji.new.launcher.uninstall",
+            "uninstallApp": "$LOCALAPPDATA/jikji.new.name.uninstall",
             // 설치 후 uninstall 폴더가 위치한 폴더 경로를 지정.
             // (uninstall app 실행 폴더, packagee.json 위치)
-            "uninstallAppFolder": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
+            "uninstallAppFolder": "$APP_PATH/launcher/uninstall"
         },
 
         // 패키징 할때 package json 파일에서 다음 항목들을 누락 시킴
@@ -216,9 +220,11 @@ Program Files 폴더에 런처 설치
     "-----------------------": "-----------------------",
     
     "version": "0.1.0",
-    "name": "jikji.new.launcher",
-    "domain": "jikji.new.launcher",
     "description": "epub 저작 도구",
+
+    // installer에서 childApp.name 값으로 자동 설정됨
+    "name": "jikji.new.name.launcher",
+    "domain": "jikji.new.name.launcher",
     
     "------------------------": "-----------------------",
     

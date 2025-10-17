@@ -25,14 +25,15 @@ export class BuildConfig {
     // nwJS App 복사 기능 지원 : {name: string, excludes?: string[], dest: string}
     public childApp?: any = {};
     // public nwFiles: string[] = [];
-    public appName: string = '';
+
+    public appId: string = '';
+    public setupFolderName: string = '';
 
     public win: WinConfig = new WinConfig();
     public mac: MacConfig = new MacConfig();
     public linux: LinuxConfig = new LinuxConfig();
     public nsis: NsisConfig = new NsisConfig();
 
-    public appId: string = '';
     public ffmpegIntegration: boolean = false;
     public strippedProperties: string[] = [
         'scripts',
@@ -79,7 +80,7 @@ export class BuildConfig {
 
         this.output = normalize(this.output);
 
-        this.appId = this.appId ? this.appId : (pkg.domain || pkg.name);
+        if(!this.appId) this.appId = (pkg.domain || pkg.name);
 
         if (this.win.versionStrings.ProductName && !this.win.productName) {
             console.warn('DEPRECATED: build.win.versionStrings.ProductName is deprecated, use build.win.productName instead.');
@@ -122,7 +123,8 @@ export class BuildConfig {
         //     this.childApp.excludes = this.childApp.excludes || [];
         //     this.childApp.dest = this.childApp.dest ? normalize(this.childApp.dest) : '';
         // }
-        this.appName = pkg.name;
+        
+        this.setupFolderName = `${this.appId}.setup`;
     }
 
 }

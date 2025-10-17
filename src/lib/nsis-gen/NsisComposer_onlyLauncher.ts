@@ -59,9 +59,9 @@ Function un.Install_App_Launcher
     skipDelete:
 
     ; nw 실행시 생성되는 chrome app 폴더 삭제
-    StrCmp "\${CHROME_APP_LAUNCHER}" "" ok
-        ;MessageBox MB_OK "삭제: \${CHROME_APP_LAUNCHER}"
-        RMDir /r "\${CHROME_APP_LAUNCHER}"
+    StrCmp "\${CHROME_APP_PATH}" "" ok
+        ;MessageBox MB_OK "삭제: \${CHROME_APP_PATH}"
+        RMDir /r "\${CHROME_APP_PATH}"
     ok:
 FunctionEnd
         `;
@@ -80,15 +80,20 @@ FunctionEnd
             `;
         }
 
-        const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
-        const chromeAppDest = childApp.dest ? win32.normalize(childApp.dest) : '';
+        const chromeLauncherPath = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+        const nwRoot = childApp.dest ? win32.normalize(childApp.dest) : '';
         
         console.log('\n');
         console.log(Ansi.yellow);
+        
         console.log(`* EXE_FILE_NAME: ${this.options.exeName}`);
-        console.log(`* CHROME_APP_LAUNCHER: ${this.options.appName}`);
-        console.log(`* CHROME_APP_CHILD: ${chromeAppName}`);
-        console.log(`* CHILD_APP_DEST: ${chromeAppDest}`);
+        console.log(`* APP ID: ${this.options.appId}`);
+        console.log(`* CHROME_APP_PATH: ${this.chromeAppPath}`);
+        console.log(`* CHROME_LAUNCHER_PATH: ${chromeLauncherPath}`);
+        console.log('');
+
+        console.log(`* APP_PATH: ${this.appPath}`);
+        console.log(`* NW_PATH: ${nwRoot}`);
         console.log(Ansi.reset);
         console.log('\n');
 
@@ -138,10 +143,10 @@ FunctionEnd
 ; Child App 복사
 ;----------------------------
 
-!define CHROME_APP_CHILD            "${chromeAppName}"
+!define CHROME_LAUNCHER_PATH            "${chromeLauncherPath}"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define CHILD_APP_DEST              "${chromeAppDest}"
+!define NW_PATH                  "${nwRoot}"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -149,8 +154,8 @@ FunctionEnd
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
 !macro Install_App_Child
 
-    StrCmp "\${CHILD_APP_DEST}" "" skipChildApp
-        StrCpy $9 "\${CHILD_APP_DEST}"
+    StrCmp "\${NW_PATH}" "" skipChildApp
+        StrCpy $9 "\${NW_PATH}"
         RMDir /r $9
 
         ; child app 설치 위치 
@@ -171,12 +176,12 @@ FunctionEnd
 
 Function un.Install_App_Child
     ; childApp 폴더 삭제
-    RMDir /r "\${CHILD_APP_DEST}"
+    RMDir /r "\${NW_PATH}"
     
     ; nw 실행시 생성되는 chrome app 폴더 삭제
-    StrCmp "\${CHROME_APP_CHILD}" "" skipChildApp
-        ;MessageBox MB_OK "삭제: \${CHROME_APP_CHILD}"
-        RMDir /r "\${CHROME_APP_CHILD}"
+    StrCmp "\${CHROME_LAUNCHER_PATH}" "" skipChildApp
+        ;MessageBox MB_OK "삭제: \${CHROME_LAUNCHER_PATH}"
+        RMDir /r "\${CHROME_LAUNCHER_PATH}"
     skipChildApp:
 FunctionEnd
         `;

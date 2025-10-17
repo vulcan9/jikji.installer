@@ -50,7 +50,9 @@ export interface INsisComposerOptions {
         uninstallApp?: string
         uninstallAppFolder?: string
     };
-    appName: string;
+
+    appId: string;
+    setupFolderName: string;
     // nwFiles: string[];
     
     // nwJS 리소스 복사할 폴더명
@@ -84,6 +86,10 @@ export class NsisComposer {
     // 새 APP_ID (Jump List)를 생성하여 강제 갱신
     protected appUserModelID: string;
 
+    // 크롬 App 생성 폴더 경로
+    protected chromeAppPath: string;
+    // child app 폴더 전체 경로
+    protected appPath: string;
 
     constructor(protected options: INsisComposerOptions) {
 
@@ -103,12 +109,15 @@ export class NsisComposer {
 
         this.fixedVersion = fixWindowsVersion(this.options.version);
 
-        if (this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
-
         // process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
         
         // 프로그램 링크를 그룹화 하기 위해 appID 설정
         this.appUserModelID = this.options.childApp ? (this.options.childApp.nwName || this.options.childApp.name) : this.options.exeName;
+
+        // child app id 폴더 경로
+        this.chromeAppPath = win32.normalize(`$LOCALAPPDATA/${this.options.appId}`);
+        // child app id + '.setup' 폴더 경로
+        this.appPath = win32.normalize(`$LOCALAPPDATA/${this.options.setupFolderName}`);
     }
 
     public async make(): Promise<string> {
@@ -123,6 +132,9 @@ export class NsisComposer {
         */
         return `
 
+# child app 폴더 경로 (~.setup)
+Var /GLOBAL APP_PATH
+
 ;####################################################################################################################
 ; define Settings
 ;####################################################################################################################
@@ -131,7 +143,7 @@ export class NsisComposer {
 !define OUTFILE_NAME              "${win32.normalize(resolve(this.options.output))}"
 
 ; nw 실행시 생성되는 chrome app 폴더 경로
-!define CHROME_APP_LAUNCHER       "${this.options.appName}"
+!define CHROME_APP_PATH           "${this.chromeAppPath}"
 
 ;----------------------------------------------------------
 ; 배포 프로그램 이름, 버전 및 기타 변수
@@ -362,6 +374,9 @@ SectionEnd
 ;####################################################################################################################
 
 Function .onInit
+    ; 전역 변수 초기화
+    StrCpy $APP_PATH "${this.appPath}"
+
     ; 기존에 실행중인 프로그램 종료.
     Call CheckAndCloseApp
 FunctionEnd
@@ -781,9 +796,9 @@ Function un.Install_App_Launcher
     skipDelete:
 
     ; nw 실행시 생성되는 chrome app 폴더 삭제
-    StrCmp "\${CHROME_APP_LAUNCHER}" "" ok
-        ;MessageBox MB_OK "삭제: \${CHROME_APP_LAUNCHER}"
-        RMDir /r "\${CHROME_APP_LAUNCHER}"
+    StrCmp "\${CHROME_APP_PATH}" "" ok
+        ;MessageBox MB_OK "삭제: \${CHROME_APP_PATH}"
+        RMDir /r "\${CHROME_APP_PATH}"
     ok:
 FunctionEnd
         `;
@@ -800,8 +815,8 @@ FunctionEnd
             `;
         }
 
-        const chromeAppName = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
-        const chromeAppDest = childApp.dest ? win32.normalize(childApp.dest) : '';
+        const chromeLauncherPath = childApp.name ? '$LOCALAPPDATA\\' + childApp.name : '';
+        const nwRoot = childApp.dest ? win32.normalize(childApp.dest) : '';
 
         const excludes = childApp.excludes || [];
         const moves: string[] = childApp.moves || [];
@@ -837,7 +852,7 @@ FunctionEnd
 
         const DELETE_LIST = (() => {
             return excludes.map(p => {
-                const path = win32.normalize(chromeAppDest + '/' + p);
+                const path = win32.normalize(nwRoot + '/' + p);
                 // 비어있지 않은 폴더도 삭제하려면 /r 옵션을 줘야함
                 return (p.includes('.') ? 'Delete' : 'RMDir /r') + ` "${path}"\n`;
             }).join(' ');
@@ -853,10 +868,10 @@ FunctionEnd
 ; Child App 복사
 ;----------------------------
 
-!define CHROME_APP_CHILD            "${chromeAppName}"
+!define CHROME_LAUNCHER_PATH       "${chromeLauncherPath}"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define CHILD_APP_DEST              "${chromeAppDest}"
+!define NW_ROOT                     "${nwRoot}"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -864,8 +879,8 @@ FunctionEnd
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
 !macro Install_App_Child
 
-    StrCmp "\${CHILD_APP_DEST}" "" skipChildApp
-        StrCpy $9 "\${CHILD_APP_DEST}"
+    StrCmp "\${NW_ROOT}" "" skipChildApp
+        StrCpy $9 "\${NW_ROOT}"
         RMDir /r $9
 
         ; child app 설치 위치 
@@ -891,9 +906,9 @@ FunctionEnd
         CopyFiles /SILENT "$INSTDIR\\*.*" "$9"
         
         # chrome app 리소스 따로 복사해 줘야함
-        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${chromeAppDest}"
-        # CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${chromeAppDest}\\locales"
-        # CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${chromeAppDest}\\swiftshader"
+        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${nwRoot}"
+        # CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${nwRoot}\\locales"
+        # CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${nwRoot}\\swiftshader"
         CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "$9\\locales"
         CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "$9\\swiftshader"
         
@@ -901,7 +916,7 @@ FunctionEnd
         # 방법 2: nwJS 설치 (installer 파일 그대로 사용)
         # resource로 정의된 리스트는 $INSTDIR 폴더에서 제외됨
         # moves 목록은 이미 실행됬으므로 전체 폴더를 카피해도 됨 (chrome app만 남아있음)
-        # CopyFiles /SILENT "$INSTDIR\\*.*" "${chromeAppDest}"
+        # CopyFiles /SILENT "$INSTDIR\\*.*" "${nwRoot}"
         
         # 제외 목록 삭제
         ${DELETE_LIST}
@@ -911,12 +926,12 @@ FunctionEnd
 
 Function un.Install_App_Child
     ; childApp 폴더 삭제
-    RMDir /r "\${CHILD_APP_DEST}"
+    RMDir /r "\${NW_ROOT}"
     
     ; nw 실행시 생성되는 chrome app 폴더 삭제
-    StrCmp "\${CHROME_APP_CHILD}" "" skipChildApp
-        ;MessageBox MB_OK "삭제: \${CHROME_APP_CHILD}"
-        RMDir /r "\${CHROME_APP_CHILD}"
+    StrCmp "\${CHROME_LAUNCHER_PATH}" "" skipChildApp
+        ;MessageBox MB_OK "삭제: \${CHROME_LAUNCHER_PATH}"
+        RMDir /r "\${CHROME_LAUNCHER_PATH}"
     skipChildApp:
 FunctionEnd
         `;
@@ -1224,7 +1239,7 @@ FunctionEnd
 
         // Uninstall App  : childApp의 uninstall 폴더의 package.json 파일 name
         const chromiumUninstallApp = childApp.uninstallApp || '';
-        const uninstallAppFolder = childApp.uninstallAppFolder || '\${CHILD_APP_DEST}\\uninstall';
+        const uninstallAppFolder = childApp.uninstallAppFolder || '\${NW_ROOT}\\uninstall';
         
         const nwName = childApp.nwName || 'nw';
         const childAppName = this.options.onlyLauncher ? `${nwName}.exe` : '\${EXE_FILE_FULL_NAME}'
@@ -1238,7 +1253,7 @@ FunctionEnd
 ;ShowInstDetails show
 
 !macro ChildAppProcess
-    ;MessageBox MB_OK "\${CHILD_APP_DEST}"
+    ;MessageBox MB_OK "\${NW_ROOT}"
 !macroend
 
 Function un.ChildAppProcess
@@ -1264,22 +1279,22 @@ Function un.ChildAppProcess
         
     StrCmp $chromiumUninstallApp "" skipChildProcess
         
-    StrCmp "\${CHILD_APP_DEST}" "" skipChildProcess
+    StrCmp "\${NW_ROOT}" "" skipChildProcess
 
         # "C:/Users/pdi10/AppData/Local/testApp5"
-        # DetailPrint 'CHROME_APP_LAUNCHER: "\${CHROME_APP_LAUNCHER}"'
+        # DetailPrint 'CHROME_APP_PATH: "\${CHROME_APP_PATH}"'
         # "C:/Users/pdi10/AppData/Local/jikji.editor.testapp"
-        # DetailPrint 'CHROME_APP_CHILD: "\${CHROME_APP_CHILD}"'
+        # DetailPrint 'CHROME_LAUNCHER_PATH: "\${CHROME_LAUNCHER_PATH}"'
         # "C:/Users/pdi10/AppData/Local/jikji.editor.demo.setup/testapp"
-        # DetailPrint 'CHILD_APP_DEST: "\${CHILD_APP_DEST}"'
+        # DetailPrint 'NW_ROOT: "\${NW_ROOT}"'
         # "testApp3.exe"
         # DetailPrint 'EXE_FILE_FULL_NAME: "${childAppName}"'
         
         Var /GLOBAL childAppPath
-        StrCpy $childAppPath "\${CHILD_APP_DEST}\\${childAppName}"
+        StrCpy $childAppPath "\${NW_ROOT}\\${childAppName}"
         
         Var /GLOBAL uninstallAppFolder
-        # StrCpy $uninstallAppFolder "\${CHILD_APP_DEST}\\uninstall"
+        # StrCpy $uninstallAppFolder "\${NW_ROOT}\\uninstall"
         StrCpy $uninstallAppFolder "${uninstallAppFolder}"
 
         DetailPrint 'childAppPath: "$childAppPath"'

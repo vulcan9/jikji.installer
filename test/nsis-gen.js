@@ -1,15 +1,15 @@
 
 import { test } from 'ava';
 
-import { writeFile, remove } from 'fs-extra';
+import { remove, writeFile } from 'fs-extra';
 
 import { NsisComposer, NsisDiffer, nsisBuild } from '../dist/lib/nsis-gen';
-import { tmpName, tmpFile, tmpDir } from '../dist/lib/util';
+import { tmpName } from '../dist/lib/util';
 
 const options = {
 
     // Basic.
-    appName: 'Project',
+    appId: 'Project',
     companyName: 'evshiron',
     description: 'description',
     version: '0.1.0.0',
