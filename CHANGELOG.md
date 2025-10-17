@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+
+
+### 1.18.12
+
+* USB 토큰 기반 코드 사인 샘플 추가
+* codesign 옵션 설정 추가
+* ini 파일 자동 설정
+
 ### 1.18.11
 
 * Child Uninstall App 종료 보강 (onlyLauncher: true일때)

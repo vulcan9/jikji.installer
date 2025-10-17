@@ -183,9 +183,6 @@ export async function codeSign(options: SignOptions) {
         target,
         output
     } = options;
-    console.log(`\n# 코드 사인 준비중 ...`);
-    console.log('(코드 사인) target: ', target);
-    console.log('(코드 사인) output: ', output);
 
     let tempPath;
     try {
@@ -194,6 +191,9 @@ export async function codeSign(options: SignOptions) {
             tempPath = output;
         }
         options.output = output || target;
+        console.log(`\n# 코드 사인 준비중 ...`);
+        console.log('(코드 사인) target: ', target);
+        console.log('(코드 사인) output: ', options.output);
 
         // signtool로 서명하기
         if (options.pfxPath) return await sign_pfx(options);

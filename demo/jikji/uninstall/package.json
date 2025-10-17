@@ -1,5 +1,6 @@
 {
-    "name": "jikji.new.launcher.uninstall",
+    "name": "installer에서 (childApp.name + .uninstall) 값으로 자동 설정됨",
+
     "version": "0.1.0",
     "description": "uninstall 과정에서 실행됨",
     "main": "index.html",

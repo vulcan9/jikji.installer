@@ -11,7 +11,7 @@
         "ffmpegIntegration": true,
         
         "CodeSign 설정": "SafeNet Authentication Client",
-
+    
         "codesign": {
             "tockenName": "tovsoft co.,Ltd"
         },
@@ -65,13 +65,17 @@
             {
                 "src": "launcher",
                 "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
+            },
+            {
+                "src": "uninstall",
+                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
             }
         ],
 
         "uninstall": "$LOCALAPPDATA/jikji.new.launcher.setup/firstrun",
         
         "childApp": {
-            "nwName": "NwApp",
+            "nwName": "NwAppTest",
             "name": "jikji.new.launcher",
             "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",
             

@@ -100,24 +100,35 @@ export class Builder_onlyLauncher extends Builder {
     // jikji.editor.launcher.exe 파일의 속성 변경
     protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
         
-        // 런처 exe 속성 변경
+        // 런처 exe
         const launcherName_origin = 'jikji.editor.launcher';
         const launcherExe_origin = `${launcherName_origin}.exe`;
         const launcherIni_origin = `${launcherName_origin}.ini`;
-        // await this.updateWinResources(path.resolve(targetDir, launcherExe_origin), config);
+        // 런처 exe 새이름
+        const launcherName = config.win.exeName;
+        const launcherExe = `${launcherName}.exe`;
+        const launcherIni = `${launcherName}.ini`;
 
         // 런처 exe 이름 변경
-        const launcherName = config.win.exeName;
+        let launcherExePath = path.resolve(targetDir, launcherExe_origin);
+        let launcherIniPath = path.resolve(targetDir, launcherIni);
         if (launcherName !== launcherName_origin) {
-            const launcherExe = `${launcherName}.exe`;
-            const launcherIni = `${launcherName}.ini`;
-            await fs.rename(path.resolve(targetDir, launcherExe_origin), path.resolve(targetDir, launcherExe));
-            await fs.rename(path.resolve(targetDir, launcherIni_origin), path.resolve(targetDir, launcherIni));
+            launcherExePath = path.resolve(targetDir, launcherExe);
+            await fs.rename(path.resolve(targetDir, launcherExe_origin), launcherExePath);
+            await fs.rename(path.resolve(targetDir, launcherIni_origin), launcherIniPath);
             config.childApp.excludes.push(launcherExe);
             config.childApp.excludes.push(launcherIni);
         }
         config.childApp.excludes.push('uninstall.exe');
         config.childApp.excludes.push('package.json');
+        
+        // 런처 exe 속성 변경 (+코드사인)
+        await this.updateWinResources(launcherExePath, config, {
+            OriginalFilename: launcherExe,
+            ProductVersion: "1.0.0.2",
+            FileVersion: "1.0.0.2",
+            FileDescription: `${config.win.fileDescription} 런처`,
+        });
 
         /**
         # 작업 표시줄 아이콘 안바뀜 현상
@@ -132,24 +143,64 @@ export class Builder_onlyLauncher extends Builder {
         - Explorer 재시작
         */
         
-        // nw.exe 속성 변경
+        // -------------------
+        // nw.exe 변경
         const nw_origin = 'nw.exe';
         const nwPath_origin = path.resolve(targetDir, config.nwFolderName, nw_origin);
-        await this.updateWinResources(nwPath_origin, config);
-
-        // nw.exe 이름 변경
+        // nw.exe 새이름
         const nwName = config.childApp.nwName;
         const nwNameExe = `${nwName}.exe`;
+
+        // nw.exe 이름 변경
+        let nwExePath = nwPath_origin;
         if (nwName && nw_origin !== nwNameExe) {
-            const nwExePath = path.resolve(targetDir, config.nwFolderName, nwNameExe);
+            nwExePath = path.resolve(targetDir, config.nwFolderName, nwNameExe);
             await fs.rename(nwPath_origin, nwExePath);
         }
+
+        // nw.exe 속성 변경 (+코드사인)
+        await this.updateWinResources(nwExePath, config, {
+            OriginalFilename: nwNameExe
+        });
+
+        // -------------------
+        // ini 파일 내용 수정
+        const childAppName = config.childApp.name;
+        // ##__PackageJsonAppName_## : childAppName
+        // ##__nwExeName__## : nwName
+
+        (() => {
+            var data = fs.readFileSync(launcherIniPath, { encoding: 'utf-8' });
+            data = data.replace(/##__PackageJsonAppName_##/, childAppName);
+            data = data.replace(/##__nwExeName__##/, nwName);
+            fs.outputFileSync(launcherIniPath, data);
+        })();
+        
+        // -------------------
+        // child app (launcher)
+        // onlyLauncher App을 위한 package json 파일 수정
+        (() => {
+            let launcherPackageJsonPath = path.resolve(targetDir, 'launcher/package.json');
+            var data = fs.readFileSync(launcherPackageJsonPath, { encoding: 'utf-8' });
+            var obj = JSON.parse(data);
+            // launcher App 이름 : jikji.new.launcher
+            obj['name'] = childAppName;
+            obj['domain'] = childAppName;
+            fs.outputJsonSync(launcherPackageJsonPath, obj, {spaces: 4});
+        })();
+        
+        // -------------------
+        // child app (uninstall)
+        // onlyLauncher App을 uninstall 하기위한 package json 파일 수정
+        (() => {
+            let uninstallPackageJsonPath = path.resolve(targetDir, 'uninstall/package.json');
+            var data = fs.readFileSync(uninstallPackageJsonPath, { encoding: 'utf-8' });
+            var obj = JSON.parse(data);
+            // uninstall App 이름 : jikji.new.launcher.uninstall
+            obj['name'] = `${childAppName}.uninstall`;
+            obj['domain'] = `${childAppName}.uninstall`;
+            fs.outputJsonSync(uninstallPackageJsonPath, obj, {spaces: 4});
+        })();
+        
     }
-
-    /*
-    윈도우용만 남겨놓기로...darwin, osx, mac, linux
-    rcedit icon 변경 skip
-    버전 롤백(리스트) 기능 X
-    */
 }
-

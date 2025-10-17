@@ -18,7 +18,7 @@ Program Files 폴더에 런처 설치
 # 설정 내용
 
 ```json
-{   
+{
     // productVersion이 없으면 대신 사용됨
     "version": "0.1.0",
     // 설치파일 이름에 사용됨 (예: launcher.sample-0.1.0 (win x86).exe)
@@ -34,6 +34,27 @@ Program Files 폴더에 런처 설치
         "install_visualCpp": false,
         // (true) iteufel/nwjs-ffmpeg-prebuilt 에서 ffmpeg.dll 자동 다운로드하여 적용시켜줌 
         "ffmpegIntegration": true,
+
+        "(생략 가능) 코드사인 설정": "-----------------------",
+
+        /* 
+        코드사인이 적용되는 파일들:
+        - child App exe : nwJS 실행 파일(nw.exe)
+        - 런처 exe : jikji.editor.launcher.exe
+        - 최종 설치 파일 (installer exe)
+        */
+        "codesign": {
+            // USB Tocken을 이용한 코드사인 설정
+            "tockenName": "tovsoft co.,Ltd",
+            
+            // pxf 파일을 이용한 코드사인 설정
+            /*
+            // PFX 비밀번호
+            "password": "1234",
+            // 인증서의 이름
+            "certName": "SelfSigned_테스트"
+            */
+        },
 
         "기본 설정": "-----------------------",
 
@@ -113,6 +134,10 @@ Program Files 폴더에 런처 설치
             {
                 "src": "launcher",
                 "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher"
+            },
+            {
+                "src": "uninstall",
+                "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/launcher/uninstall"
             }
         ],
         
@@ -122,10 +147,11 @@ Program Files 폴더에 런처 설치
         // (생략 가능) launcher-app 구조로 설치하고자 할때 (재귀 적용됨)
         "childApp": {
             // nw.exe rename 할때 사용할 이름(.exe 생략한 이름 부분).
-            // jikji.editor.launcher.ini 파일에도 file 값에 같은값을 적용해 주어야 함
+            // jikji.editor.launcher.ini 파일에도 file 값에 같은값을 적용해 주어야 함 (##__nwExeName__## 치환됨)
             "nwName": "NwApp",
 
-            // launcher 폴더의 pckageJson.name
+            // launcher, uninstall 폴더의 pckageJson.name
+            // (##__PackageJsonAppName_## 치환됨)
             "name": "jikji.new.launcher",
             // childApp이 설치될 위치
             "dest": "$LOCALAPPDATA/jikji.new.launcher.setup/app",

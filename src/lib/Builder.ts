@@ -14,6 +14,7 @@ import { DownloaderBase, NsisVersionInfo } from './common/index.js';
 import { BuildConfig } from './config/index.js';
 
 import Ansi from '../AnsiCode.js';
+import { codeSign } from './CodeSign.js';
 import { NsisComposer_onlyLauncher } from './nsis-gen/NsisComposer_onlyLauncher.js';
 import { INsisComposerOptions, nsisBuild, NsisComposer, NsisDiffer } from './nsis-gen/index.js';
 import {
@@ -258,32 +259,71 @@ export class Builder {
         return fs.writeFile(path, plist.build(p));
     }
 
-    protected async updateWinResources(exePath: string, config: BuildConfig) {
+    protected async updateWinResources(exePath: string, config: BuildConfig, versionStrings = {}) {
 
         let icon = config.win.icon ? path.resolve(this.dir, config.win.icon) : '';
         icon = icon.replace(/\\/g, '/');
 
+        const info = {
+            ProductVersion: config.win.productVersion,
+            ProductName: config.win.productName,
+            CompanyName: config.win.companyName,
+
+            FileVersion: config.win.fileVersion,
+            FileDescription: config.win.fileDescription,
+            LegalCopyright: config.win.copyright,
+
+            ...config.win.versionStrings,
+            ...versionStrings
+        }
         const rc = {
-            'product-version': fixWindowsVersion(config.win.productVersion),
-            'file-version': fixWindowsVersion(config.win.fileVersion),
-            'version-string': {
-                ProductName: config.win.productName,
-                CompanyName: config.win.companyName,
-                FileDescription: config.win.fileDescription,
-                LegalCopyright: config.win.copyright,
-                ...config.win.versionStrings,
-            },
+            'product-version': fixWindowsVersion(info.ProductVersion),
+            'file-version': fixWindowsVersion(info.FileVersion),
+            'version-string': info,
             'icon': icon,
         };
 
-        console.log(Ansi.magenta);
-        console.log('# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
-        console.log(`\t- exe: ${exePath}`);
-        console.log(`\t- icon: ${rc.icon}`);
-        console.log(Ansi.reset);
-
         await rcedit(exePath, rc);
         console.log(Ansi.yellow, `# exe 속성 변경: ${exePath}`, Ansi.reset);
+        console.log('# 파일 속성: ', rc);
+
+        if (!config.codesign) {
+            console.log(Ansi.magenta);
+            console.log('# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
+            console.log(`\t- exe: ${exePath}`);
+            console.log(`\t- icon: ${rc.icon}`);
+            console.log(Ansi.reset);
+            return;
+        }
+
+        // nw 복사할때 코드 사인 적용
+        // (사인 만료 기간 있으므로 다운로드 할때 하지 않음)
+        await this.applyCodeSign({
+            // 코드사인을 적용할 exe, dll 파일
+            target: exePath,
+            // 코드사인을 적용한 파일 경로
+            // - output 설정하지 않으면 원본에 사인
+            // - 설정하면 복사본에 사인
+            output: exePath
+        }, config);
+    }
+
+    /*
+    const commonOption = {
+        // 코드사인을 적용할 exe, dll 파일
+        target: exePath,
+        // 코드사인을 적용한 파일 경로
+        // - output 설정하지 않으면 원본에 사인
+        // - 설정하면 복사본에 사인
+        output: exePath
+    };
+    */
+    protected async applyCodeSign(commonOption: any, config: BuildConfig) {
+        console.log(Ansi.yellow, '# 코드 사인 적용: ', config.codesign, Ansi.reset);
+        await codeSign({
+            ...commonOption,
+            ...config.codesign
+        });
     }
 
     protected async renameWinApp(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
@@ -716,6 +756,7 @@ export class Builder {
         }
 
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
+        // 인스톨 exe 파일 생성 경로
         const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const options = {
@@ -751,6 +792,10 @@ export class Builder {
         }
 
         await versionInfo.save();
+        
+        // 인스톨 결과물 코드 사인 적용
+        // output 설정하지 않으면 원본에 사인
+        await this.applyCodeSign({ target: targetNsis }, config);
     }
 
     protected async buildNsis7zTarget(platform: string, arch: string, sourceDir: string, pkg: any, config: BuildConfig) {
@@ -763,11 +808,12 @@ export class Builder {
         }
 
         const versionInfo = new NsisVersionInfo(path.resolve(this.dir, config.output, 'versions.nsis.json'));
+        // 인스톨 exe 파일 생성 경로
+        const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
+
         // 압축파일 (경로)
         // sourceDir : 압축 대상 폴더 경로
         const sourceArchive = await this.buildArchiveTarget('7z', sourceDir);
-        // 인스톨 exe 파일 생성 경로
-        const targetNsis = path.resolve(path.dirname(sourceDir), `${path.basename(sourceDir)}.exe`);
 
         const options = {
             ...this.getNsisComposerOptions(config),
@@ -802,6 +848,10 @@ export class Builder {
         }
 
         await versionInfo.save();
+        
+        // 인스톨 결과물 코드 사인 적용
+        // output 설정하지 않으면 원본에 사인
+        await this.applyCodeSign({ target: targetNsis }, config);
         return sourceArchive;
     }
 

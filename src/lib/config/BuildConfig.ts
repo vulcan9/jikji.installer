@@ -44,8 +44,11 @@ export class BuildConfig {
     public install_visualCpp: boolean = false;
     // child App을 호출하는 launcher만 Program Files 폴더에 설치
     public onlyLauncher: boolean = false;
-    // nwJS 리소스 복사할 폴더명
+    // nwJS 리소스 복사할 폴더명 (패키징을 위해 복사할 임시 폴더 이름)
     public nwFolderName: string = 'nw';
+
+    // 코드사인 정보를 설정
+    public codesign?: any = {};
 
     constructor(pkg: any = {}) {
 

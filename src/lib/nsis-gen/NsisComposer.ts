@@ -79,6 +79,11 @@ export class NsisComposer {
 
     protected fixedVersion: string = '';
 
+    // (사용 안함)
+    // 프로그램 링크를 그룹화 하기 위해 appID 설정
+    // 새 APP_ID (Jump List)를 생성하여 강제 갱신
+    protected appUserModelID: string;
+
 
     constructor(protected options: INsisComposerOptions) {
 
@@ -101,6 +106,9 @@ export class NsisComposer {
         if (this.options.appName) this.options.appName = '$LOCALAPPDATA\\' + this.options.appName;
 
         // process.stdout.write('this.options 설정값: \n' + JSON.stringify(this.options.childApp, null, 4) + '\n');
+        
+        // 프로그램 링크를 그룹화 하기 위해 appID 설정
+        this.appUserModelID = this.options.childApp ? (this.options.childApp.nwName || this.options.childApp.name) : this.options.exeName;
     }
 
     public async make(): Promise<string> {
@@ -559,6 +567,54 @@ SectionEnd
 
         `;
     }
+
+    /*
+    ; 새 Jump List를 생성 (링크 경로 갱신되지 않는 현상 제거)
+    ; WinShell.dll : 설치 폴더\Plugin\... 에 집어 넣음
+    ; https://nsis.sourceforge.io/WinShell_plug-in
+    
+    // Jump List 갱신되지 않는것은 child App (nwJS와 관련 있음)
+
+    protected setShortCut_withAppID(link, uninstall) {
+
+        let script = `
+    CreateShortCut        "${link}.lnk"            "$INSTDIR\\\${EXE_FILE_FULL_NAME}"     "" "" 0
+    ; 링크 경로 갱신되지 않는 현상 제거 (AppID 설정)
+    WinShell::SetLnkAUMI  "${link}.lnk"            "${this.appUserModelID}"
+    Pop $0  ; $0 == "OK" 이면 성공
+        `;
+
+        if (!uninstall) return script;
+        script += `    CreateShortCut        "${link} 제거.lnk"       "$INSTDIR\\\${UNINSTALL_NAME}"         "" "" 0`;
+        return script;
+    }
+
+    protected deleteShortCut_withAppID(link, del) {
+        let script = `
+    ; AppID 설정 제거
+    WinShell::UninstAppUserModelId "${this.appUserModelID}"
+    WinShell::UninstShortcut "${link}.lnk"
+        `;
+
+        if (!del) return script;
+        script += `    Delete "${link}.lnk"`;
+        return script;
+    }
+
+    // Jump List 아이콘 강제 갱신
+    protected setResetJumpList(link, uninstall) {
+        return `
+Section "Reset JumpList"
+    ; AppID 설정
+    ;WinShell::SetCurrentProcessExplicitAppUserModelID "${this.appUserModelID}"
+    
+    ; AppID 설정, shell32.dll 내 API 호출 ($0 값이 0 이면 성공)
+    System::Call 'shell32::SetCurrentProcessExplicitAppUserModelID(w "${this.appUserModelID}") i .r0'
+    DetailPrint "AppID set to ${this.appUserModelID}"
+SectionEnd
+        `;
+    }
+    */
 
     protected async createProgramGroup(): Promise<string> {
         return `
