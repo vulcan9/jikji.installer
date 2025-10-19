@@ -468,8 +468,18 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 !define MUI_FINISHPAGE_NOAUTOCLOSE
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE                             ; 언인스톨 종료시 자동으로 닫히지 않게 하기.
 
-!define MUI_FINISHPAGE_RUN "$INSTDIR\\\${EXE_FILE_FULL_NAME}"    ; 종료후 프로그램 자동 실행 여부 물어 보기
+# 설치 완료 후 app 자동 실행 할때
+# 관리자 권한으로 App이 실행되므로 Drop 같은 기능이 안먹힘
+# 일반 User 권한으로 실행되도록 아래에서 다시 설정함
+# (MUI_FINISHPAGE_RUN_FUNCTION 에서 LaunchAsUser 실행 설정)
+;!define MUI_FINISHPAGE_RUN "$INSTDIR\\\${EXE_FILE_FULL_NAME}"    ; 종료후 프로그램 자동 실행 여부 물어 보기
 ;!define MUI_FINISHPAGE_RUN_NOTCHECKED                           ; 자동 실행을 기본적으로 체크 안하길 원할경우.
+
+# 일반 User 권한으로 실행되도록 수정
+!define MUI_FINISHPAGE_RUN                            ; 기존 실행 제거
+!define MUI_FINISHPAGE_RUN_FUNCTION LaunchAsUser     ; Finish 시 실행 함수 지정
+!define MUI_FINISHPAGE_RUN_TEXT "프로그램 실행"
+;!define MUI_FINISHPAGE_RUN_NOTCHECKED
 
 ;##########################################################
 ; MUI Pages : https://nsis.sourceforge.io/Docs/Modern%20UI/Readme.html
@@ -535,6 +545,11 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 #!insertmacro MUI_UNPAGE_DIRECTORY
 !insertmacro MUI_UNPAGE_INSTFILES                        ; 파일 삭제 진행 상황
 #!insertmacro MUI_UNPAGE_FINISH
+
+Function LaunchAsUser
+    ; explorer.exe를 통해 실행: 일반 사용자 권한으로 실행됨
+    Exec '"$WINDIR\\explorer.exe" "$INSTDIR\\\${EXE_FILE_FULL_NAME}"'
+FunctionEnd
 
         `;
     }

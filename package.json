@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.13",
+    "version": "1.18.15",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js"
