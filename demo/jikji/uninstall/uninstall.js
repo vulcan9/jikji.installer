@@ -24,3 +24,4 @@ setTimeout(function(){
     nw.App.quit();
 }, 0);
 
+실행안됨

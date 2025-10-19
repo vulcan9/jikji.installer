@@ -5,6 +5,14 @@ See [standard-version](https://github.com/conventional-changelog/standard-versio
 
 
 
+
+
+### 1.18.13
+
+* (onlyLauncher: true일때) 파일 자동으로 추가
+    - vender/jikji.editor.launcher.exe
+    - vender/jikji.editor.launcher.ini
+
 ### 1.18.12
 
 * USB 토큰 기반 코드 사인 샘플 추가

@@ -93,7 +93,7 @@ FunctionEnd
         console.log('');
 
         console.log(`* APP_PATH: ${this.appPath}`);
-        console.log(`* NW_PATH: ${nwRoot}`);
+        console.log(`* NW_ROOT: ${nwRoot}`);
         console.log(Ansi.reset);
         console.log('\n');
 
@@ -146,7 +146,7 @@ FunctionEnd
 !define CHROME_LAUNCHER_PATH            "${chromeLauncherPath}"
 
 # 서브 App 리소스 (nwJS App) - 런처가 실행할 app
-!define NW_PATH                  "${nwRoot}"
+!define NW_ROOT                  "${nwRoot}"
 
 ; Program Files 폴더에서 nwJS App을 런처로 사용하고자 할 경우 권한 문제가 발생한다.
 ; 설치된 $INSTDIR 폴더는 런처 app 으로 사용하고
@@ -154,8 +154,8 @@ FunctionEnd
 ; 하나의 nwJS 리소스로 런처 및 app으로 구동 시킬수 없다.
 !macro Install_App_Child
 
-    StrCmp "\${NW_PATH}" "" skipChildApp
-        StrCpy $9 "\${NW_PATH}"
+    StrCmp "\${NW_ROOT}" "" skipChildApp
+        StrCpy $9 "\${NW_ROOT}"
         RMDir /r $9
 
         ; child app 설치 위치 
@@ -176,7 +176,7 @@ FunctionEnd
 
 Function un.Install_App_Child
     ; childApp 폴더 삭제
-    RMDir /r "\${NW_PATH}"
+    RMDir /r "\${NW_ROOT}"
     
     ; nw 실행시 생성되는 chrome app 폴더 삭제
     StrCmp "\${CHROME_LAUNCHER_PATH}" "" skipChildApp

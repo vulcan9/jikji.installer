@@ -355,6 +355,9 @@ Section Uninstall
     Call un.Install_App_Launcher
     Call un.Install_App_Child
     Call un.Install_Resource
+    
+    ; $APP_PATH 폴더가 비어 있으면 삭제
+    RmDir "$APP_PATH"
 
     SetDetailsPrint both
     
@@ -393,6 +396,9 @@ Function .onInstFailed
 FunctionEnd
 
 Function un.onInit
+    ; 전역 변수 초기화
+    StrCpy $APP_PATH "${this.appPath}"
+
     ; 기존에 실행중인 프로그램 종료.
     Call un.CheckAndCloseApp
 FunctionEnd
@@ -1278,7 +1284,7 @@ Function un.ChildAppProcess
     StrCpy $chromiumUninstallApp "${win32.normalize(chromiumUninstallApp)}"
         
     StrCmp $chromiumUninstallApp "" skipChildProcess
-        
+
     StrCmp "\${NW_ROOT}" "" skipChildProcess
 
         # "C:/Users/pdi10/AppData/Local/testApp5"

@@ -1,9 +1,14 @@
 import fs from "fs-extra";
 import path from "path";
+import { fileURLToPath } from "url";
 import Ansi from "../AnsiCode.js";
 import { Builder, IBuilderOptions } from "./Builder.js";
 import { BuildConfig } from "./config/BuildConfig.js";
 import { findRuntimeRoot } from "./util/index.js";
+
+
+const __filename = fileURLToPath(import.meta.url);
+const DIR_VENDER = path.resolve(path.dirname(__filename), '../../vender/');
 
 export class Builder_onlyLauncher extends Builder {
 
@@ -101,36 +106,35 @@ export class Builder_onlyLauncher extends Builder {
     protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
         
         // console.error('config: ', config)
-
-        // 런처 exe
-        const launcherName_origin = 'jikji.editor.launcher';
-        const launcherExe_origin = `${launcherName_origin}.exe`;
-        const launcherIni_origin = `${launcherName_origin}.ini`;
-        // 런처 exe 새이름
-        const launcherName = config.win.exeName;
-        const launcherExe = `${launcherName}.exe`;
-        const launcherIni = `${launcherName}.ini`;
-
-        // 런처 exe 이름 변경
-        let launcherExePath = path.resolve(targetDir, launcherExe_origin);
-        let launcherIniPath = path.resolve(targetDir, launcherIni);
-        if (launcherName !== launcherName_origin) {
-            launcherExePath = path.resolve(targetDir, launcherExe);
-            await fs.rename(path.resolve(targetDir, launcherExe_origin), launcherExePath);
-            await fs.rename(path.resolve(targetDir, launcherIni_origin), launcherIniPath);
-            config.childApp.excludes.push(launcherExe);
-            config.childApp.excludes.push(launcherIni);
-        }
         config.childApp.excludes.push('uninstall.exe');
         config.childApp.excludes.push('package.json');
         
-        // 런처 exe 속성 변경 (+코드사인)
-        await this.updateWinResources(launcherExePath, config, {
-            OriginalFilename: launcherExe,
-            ProductVersion: "1.0.0.2",
-            FileVersion: "1.0.0.2",
-            FileDescription: `${config.win.fileDescription} 런처`,
-        });
+        // 런처 exe, ini 새이름/경로
+        const launcherName = config.win.exeName;
+        const launcherExe = `${launcherName}.exe`;
+        const launcherIni = `${launcherName}.ini`;
+        config.childApp.excludes.push(launcherExe);
+        config.childApp.excludes.push(launcherIni);
+
+        const launcherExePath = path.resolve(targetDir, launcherExe);
+        const launcherIniPath = path.resolve(targetDir, launcherIni);
+        await (async () => {
+            // 런처 원본 파일
+            const launcherName_origin = 'jikji.editor.launcher';
+            const launcherExePath_origin = path.resolve(DIR_VENDER, `${launcherName_origin}.exe`);
+            const launcherIniPath_origin = path.resolve(DIR_VENDER, `${launcherName_origin}.ini`);
+            // 런처 원본 파일 복사
+            await fs.copy(launcherExePath_origin, launcherExePath, { overwrite: true });
+            await fs.copy(launcherIniPath_origin, launcherIniPath, { overwrite: true });
+            
+            // 런처 exe 속성 변경 (+코드사인)
+            await this.updateWinResources(launcherExePath, config, {
+                OriginalFilename: launcherExe,
+                ProductVersion: "1.0.0.2",
+                FileVersion: "1.0.0.2",
+                FileDescription: `${config.win.fileDescription} 런처`,
+            });
+        })();
 
         /**
         # 작업 표시줄 아이콘 안바뀜 현상
@@ -147,23 +151,28 @@ export class Builder_onlyLauncher extends Builder {
         
         // -------------------
         // nw.exe 변경
-        const nw_origin = 'nw.exe';
-        const nwPath_origin = path.resolve(targetDir, config.nwFolderName, nw_origin);
-        // nw.exe 새이름
+
         const nwName = config.childApp.nwName;
-        const nwNameExe = `${nwName}.exe`;
 
-        // nw.exe 이름 변경
-        let nwExePath = nwPath_origin;
-        if (nwName && nw_origin !== nwNameExe) {
-            nwExePath = path.resolve(targetDir, config.nwFolderName, nwNameExe);
-            await fs.rename(nwPath_origin, nwExePath);
-        }
+        await (async () => {
+            const nw_origin = 'nw.exe';
+            const nwPath_origin = path.resolve(targetDir, config.nwFolderName, nw_origin);
 
-        // nw.exe 속성 변경 (+코드사인)
-        await this.updateWinResources(nwExePath, config, {
-            OriginalFilename: nwNameExe
-        });
+            // nw.exe 새이름
+            const nwNameExe = `${nwName}.exe`;
+
+            // nw.exe 이름 변경
+            let nwExePath = nwPath_origin;
+            if (nwName && nw_origin !== nwNameExe) {
+                nwExePath = path.resolve(targetDir, config.nwFolderName, nwNameExe);
+                await fs.rename(nwPath_origin, nwExePath);
+            }
+
+            // nw.exe 속성 변경 (+코드사인)
+            await this.updateWinResources(nwExePath, config, {
+                OriginalFilename: nwNameExe
+            });
+        })();
 
         // -------------------
         // ini 파일 내용 수정
