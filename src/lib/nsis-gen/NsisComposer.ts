@@ -478,7 +478,7 @@ BrandingText "\${PRODUCT_COMPANY} - \${PRODUCT_WEBSITE}"
 # 일반 User 권한으로 실행되도록 수정
 !define MUI_FINISHPAGE_RUN                            ; 기존 실행 제거
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchAsUser     ; Finish 시 실행 함수 지정
-!define MUI_FINISHPAGE_RUN_TEXT "프로그램 실행"
+!define MUI_FINISHPAGE_RUN_TEXT "\${PRODUCT_NAME} 프로그램 실행"
 ;!define MUI_FINISHPAGE_RUN_NOTCHECKED
 
 ;##########################################################
