@@ -45,6 +45,7 @@
     },
     "homepage": "https://github.com/vulcan9/jikji.installer#readme",
     "devDependencies": {
+        "@eslint/js": "^9.38.0",
         "@types/debug": "4.1.12",
         "@types/es6-shim": "^0.31.45",
         "@types/globby": "^9.1.0",
@@ -57,12 +58,13 @@
         "@typescript-eslint/eslint-plugin": "^8.44.0",
         "@typescript-eslint/parser": "^8.44.0",
         "cross-env": "^10.0.0",
-        "eslint": "^9.35.0",
+        "eslint": "^9.38.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
         "prettier": "^3.6.2",
         "standard-version": "^9.5.0",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.46.2"
     },
     "dependencies": {
         "7zip-bin": "^5.2.0",

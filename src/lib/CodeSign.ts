@@ -42,7 +42,7 @@ export function self_certificate(options: CertOptions) {
 
     // 1. 현재 사용자 인증서 저장소에서 동일 이름 인증서가 있는지 확인
     // Get-ChildItem -Path Cert:\\CurrentUser\\My | Where-Object { $_.Subject -eq 'CN=${certName}' }
-    let checkCommand = toPowershell([
+    const checkCommand = toPowershell([
         `Get-ChildItem -Path '${certPath}'`,
         '|',
         `Where-Object { $_.Subject -eq 'CN=${certName}' }`
@@ -62,7 +62,7 @@ export function self_certificate(options: CertOptions) {
                                   -Subject 'CN=${certName}'
                                   -CertStoreLocation Cert:\\CurrentUser\\My
     */
-    let createCommand = toPowershell([
+    const createCommand = toPowershell([
         'New-SelfSignedCertificate',
         '-Type CodeSigningCert',
         `-Subject 'CN=${certName}'`,
@@ -123,7 +123,7 @@ export function extractPFX(options: ExportOptions) {
                           Where-Object { $_.Subject -eq 'MyTestCert' })
                           -FilePath C:\certs\mytest.pfx -Password $pwd
     */
-    let command = toPowershell([
+    const command = toPowershell([
         `$pwd = ConvertTo-SecureString -String '${password}' -Force -AsPlainText;`,
         'Export-PfxCertificate -Cert',
         `(Get-ChildItem -Path '${certPath}' | Where-Object { $_.Subject -eq 'CN=${certName}' })`,
@@ -265,7 +265,7 @@ async function sign_tocken(options: SignOptions) {
 
     // 경로에 공백이 있는 실행 파일은 & 연산자를 사용
     const outputPath = output || target;
-    let command = toPowershell([
+    const command = toPowershell([
         `& '${signtoolPath}' sign /a /s my`,
         `/n '${tockenName}' `,
         
@@ -315,7 +315,7 @@ async function sign_pfx(options: SignOptions) {
 
     // 경로에 공백이 있는 실행 파일은 & 연산자를 사용
     const outputPath = output || target;
-    let command = toPowershell([
+    const command = toPowershell([
         `& '${signtoolPath}' sign /f '${pfxPath}'`,
         `/p '${password}' `,
         `/tr '${timeStamp}' `,
