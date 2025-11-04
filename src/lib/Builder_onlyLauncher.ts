@@ -85,7 +85,7 @@ export class Builder_onlyLauncher extends Builder {
             // false (기본값): 심볼릭 링크를 그대로 복사
             // true: 심볼릭 링크를 따라가서 실제 파일/폴더 내용을 복사
             //dereference: true,
-            filter: (src, dest) => !regexp.test(src)
+            filter: (src) => !regexp.test(src)
         });
 
         // 필요한 언어팩 복사
@@ -105,7 +105,45 @@ export class Builder_onlyLauncher extends Builder {
     // jikji.editor.launcher.exe 파일의 속성 변경
     protected async prepareWinBuild(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
         
-        // console.error('config: ', config)
+        /* 테스트 코드
+        await (async () => {
+            
+            const config = new BuildConfig({
+                build: {
+                    codesign: {
+                        tockenName: "tovsoft co.,Ltd"
+                    },
+                    win: {
+                        productName: 'Binder App Launcher',
+                        companyName: 'tovsoft',
+                        fileDescription: 'Binder App Launcher',
+                        productVersion: '0.1.0',
+                        fileVersion: '0.77.0',
+                        copyright: 'tovsoft (c) 2020',
+                        versionStrings: {},
+                        icon: 'launcher/assets/favicon.ico',
+                        publisher: '(주) 토브소프트',
+                        exeName: 'launcher_111',
+                        programGroupName: '토브소프트'
+                    }
+                }
+            });
+            
+            // 런처 exe 속성 변경 (+코드사인)
+            const launcherName = config.win.exeName;
+            const launcherExe = `${launcherName}.exe`;
+            const launcherExePath = path.resolve(targetDir, launcherExe);
+            await this.updateWinResources(launcherExePath, config, {
+                OriginalFilename: launcherExe,
+                ProductVersion: "1.0.0.2",
+                FileVersion: "1.0.0.2",
+                FileDescription: `${config.win.fileDescription} 런처`,
+            });
+
+            throw '작업종료----------------------------';
+        })();
+        */
+
         config.childApp.excludes.push('uninstall.exe');
         config.childApp.excludes.push('package.json');
         
@@ -180,7 +218,7 @@ export class Builder_onlyLauncher extends Builder {
         // ##__PackageJsonAppName_## : ${config.appId}.setup
         // ##__nwExeName__## : nwName
         (() => {
-            var data = fs.readFileSync(launcherIniPath, { encoding: 'utf-8' });
+            let data = fs.readFileSync(launcherIniPath, { encoding: 'utf-8' });
             data = data.replace(/##__PackageJsonAppName_##/, config.setupFolderName);
             data = data.replace(/##__nwExeName__##/, nwName);
             fs.outputFileSync(launcherIniPath, data);
@@ -190,9 +228,9 @@ export class Builder_onlyLauncher extends Builder {
         // child app (launcher)
         // onlyLauncher App을 위한 package json 파일 수정
         (() => {
-            let launcherPackageJsonPath = path.resolve(targetDir, 'launcher/package.json');
-            var data = fs.readFileSync(launcherPackageJsonPath, { encoding: 'utf-8' });
-            var obj = JSON.parse(data);
+            const launcherPackageJsonPath = path.resolve(targetDir, 'launcher/package.json');
+            const data = fs.readFileSync(launcherPackageJsonPath, { encoding: 'utf-8' });
+            const obj = JSON.parse(data);
             // launcher App 이름 : jikji.new.name.launcher
             obj['name'] = config.childApp.name;
             obj['domain'] = config.childApp.name;
@@ -203,9 +241,9 @@ export class Builder_onlyLauncher extends Builder {
         // child app (uninstall)
         // onlyLauncher App을 uninstall 하기위한 package json 파일 수정
         (() => {
-            let uninstallPackageJsonPath = path.resolve(targetDir, 'uninstall/package.json');
-            var data = fs.readFileSync(uninstallPackageJsonPath, { encoding: 'utf-8' });
-            var obj = JSON.parse(data);
+            const uninstallPackageJsonPath = path.resolve(targetDir, 'uninstall/package.json');
+            const data = fs.readFileSync(uninstallPackageJsonPath, { encoding: 'utf-8' });
+            const obj = JSON.parse(data);
             // uninstall App 이름 : jikji.new.name.uninstall
             obj['name'] = `${config.appId}.uninstall`;
             obj['domain'] = `${config.appId}.uninstall`;

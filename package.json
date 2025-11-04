@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.16",
+    "version": "1.18.17",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js"
@@ -32,7 +32,9 @@
         "jikji": "npm run build && node sample_installer.js --dir=./demo/jikji",
         "코드사인 단위 테스트": "코드사인 인증서 적용.md 문서 참고--------------------------------------",
         "codesignPfx": "npm run build && node sample_codeSign_self.js --file=\"./demo/jikji/dist/nw.exe\"",
-        "codesignTocken": "npm run build && node sample_codeSign_usb.js --file=\"./demo/jikji/dist/nw.exe\""
+        "codesignTocken": "npm run build && node sample_codeSign_usb.js --file=\"./demo/jikji/dist/nw.exe\"",
+        "아이콘 변경 & 코드사인": "JS 파일에서 옵션 직접 수정 후 사용--------------------------------------",
+        "icon-sign": "npm run build && node sample_icon_sign.js"
     },
     "repository": {
         "type": "git",

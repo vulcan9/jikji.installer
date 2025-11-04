@@ -23,5 +23,3 @@ setTimeout(function(){
     // process.exit(1);
     nw.App.quit();
 }, 0);
-
-실행안됨

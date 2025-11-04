@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
 
+### 1.18.17
+
+* 아이콘 변경 & 코드사인 샘플 작성
+
 ### 1.18.16
 
 * 설치 완료 후 app 자동 실행 할때 일반 User 권한으로 실행
