@@ -19,14 +19,14 @@ export default [
                 sourceType: "module",
                 // project: "./tsconfig.json",
             },
-              env: {
+            env: {
                 browser: true,
                 node: true,
             },
-            globals: {
-                ...tseslint.environments.es2021.globals,
-                ...tseslint.environments.browser.globals,
-            },
+            // globals: {
+            //     ...tseslint.environments.es2021.globals,
+            //     ...tseslint.environments.browser.globals,
+            // },
         },
         rules: {
             // 필요 없는 규칙 끄기 / 프로젝트 맞춤 규칙 추가

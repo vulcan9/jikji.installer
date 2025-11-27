@@ -1,6 +1,6 @@
 {
     "name": "@jj-editor/installer",
-    "version": "1.18.17",
+    "version": "1.19.0",
     "description": "jik-ji editor installer",
     "bin": {
         "build": "dist/bin/build.js"
@@ -63,6 +63,7 @@
         "eslint": "^9.38.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.4",
+        "globals": "^16.5.0",
         "prettier": "^3.6.2",
         "standard-version": "^9.5.0",
         "typescript": "^5.9.2",

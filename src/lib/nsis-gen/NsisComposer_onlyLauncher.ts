@@ -33,13 +33,13 @@ export class NsisComposer_onlyLauncher extends NsisComposer {
 
 ; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
 ;SetOutPath $INSTDIR\\assets
-;File .\\assets\\*.*
+;File .\\assets\\*
 
 ; 설치 파일. resource는 별도로 설치 한다.
 !macro Install_App_Launcher
     SetOutPath "$INSTDIR"
-    ;File /nonfatal /a /r .\\*.*
-    File /nonfatal /a /r ${EXCLUDE_LIST} .\\*.*
+    ;File /nonfatal /a /r .\\*
+    File /nonfatal /a /r ${EXCLUDE_LIST} .\\**
 !macroend
 
 Function un.Install_App_Launcher
@@ -49,7 +49,7 @@ Function un.Install_App_Launcher
     RMDir /r "$INSTDIR"
 
     ; 파일이 아직 남아 있으면..
-    IfFileExists $INSTDIR\\*.* 0 skipDelete
+    IfFileExists $INSTDIR\\* 0 skipDelete
         
         ; 삭제 확인 메세지
         ;MessageBox MB_ICONINFORMATION|MB_YESNO $(TXT_DELETE_ALL_FILES) IDNO skipDelete
@@ -113,7 +113,7 @@ FunctionEnd
                 return `
         ;MessageBox MB_OK "moves 목록: $INSTDIR\\${src}"
         ;File /nonfatal /a /r "${src}"
-        ;CopyFiles /SILENT "$INSTDIR\\${src}\\*.*" "${dest}"
+        ;CopyFiles /SILENT "$INSTDIR\\${src}\\*" "${dest}"
         Rename "$INSTDIR\\${src}" "${dest}"
             `;
             }).join('');
@@ -127,7 +127,7 @@ FunctionEnd
                 // ; /E → 하위폴더까지 복사
                 // ; /XD → 특정 폴더 제외
                 // ; /XF → 특정 파일 제외
-                // nsExec::Exec 'robocopy "$INSTDIR" "$9" *.* /E /XD logs temp /XF debug.txt config.dev.json'
+                // nsExec::Exec 'robocopy "$INSTDIR" "$9" * /E /XD logs temp /XF debug.txt config.dev.json'
                 return (p.includes('.') ? '/XF' : '/XD') + ` "${win32.normalize(p)}"`;
             }).join(' ');
         })();
@@ -162,14 +162,15 @@ FunctionEnd
         SetOutPath $9
 
         # nwJS 설치
-        File /nonfatal /a /r ${nwFolderName}\\*.*
+        File /nonfatal /a /r ${nwFolderName}\\*
         
         # moves 목록 따로 처리
         # File /nonfatal /a /r "uninstall"
         ${MOVE_LIST}
         
         # 제외 목록이 적용된 childApp 복사
-        nsExec::ExecToStack 'robocopy "$INSTDIR" "$9" *.* /E ${EXCLUDE_LIST}'
+        # ..."$9" *.* 매칭시키면 dot로 시작되는 이름의 폴더는 포함 안됨
+        nsExec::ExecToStack 'robocopy "$INSTDIR" "$9" * /E ${EXCLUDE_LIST}'
 
     skipChildApp:
 !macroend

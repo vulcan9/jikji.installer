@@ -389,7 +389,7 @@ Function .onInstFailed
     ; 기존에 실행중인 프로그램 종료.
     Call CheckAndCloseApp
 
-    Delete "$INSTDIR\\*.*"
+    Delete "$INSTDIR\\*"
     RMDir /r "$INSTDIR"
 
     SetAutoClose true
@@ -791,13 +791,13 @@ SectionEnd
 
 ; 서브디렉토리에도 파일 설치를 원할경우 아래와 같은 방법을 사용한다.
 ;SetOutPath $INSTDIR\\assets
-;File .\\assets\\*.*
+;File .\\assets\\*
 
 ; 설치 파일. resource는 별도로 설치 한다.
 !macro Install_App_Launcher
     SetOutPath "$INSTDIR"
-    ;File /nonfatal /a /r .\\*.*
-    File /nonfatal /a /r ${excludesList} .\\*.*
+    ;File /nonfatal /a /r .\\*
+    File /nonfatal /a /r ${excludesList} .\\*
 !macroend
 
 Function un.Install_App_Launcher
@@ -807,7 +807,7 @@ Function un.Install_App_Launcher
     RMDir /r "$INSTDIR"
 
     ; 파일이 아직 남아 있으면..
-    IfFileExists $INSTDIR\\*.* 0 skipDelete
+    IfFileExists $INSTDIR\\* 0 skipDelete
         
         ; 삭제 확인 메세지
         ;MessageBox MB_ICONINFORMATION|MB_YESNO $(TXT_DELETE_ALL_FILES) IDNO skipDelete
@@ -855,7 +855,7 @@ FunctionEnd
                 return `
         ;MessageBox MB_OK "moves 목록: $INSTDIR\\${src}"
         ;File /nonfatal /a /r "${src}"
-        ;CopyFiles /SILENT "$INSTDIR\\${src}\\*.*" "${dest}"
+        ;CopyFiles /SILENT "$INSTDIR\\${src}\\*" "${dest}"
         Rename "$INSTDIR\\${src}" "${dest}"
             `;
             }).join('');
@@ -865,8 +865,8 @@ FunctionEnd
         const EXCLUDE_LIST = (() => {
             const list: string[] = excludes.concat(moves);
             return list.map(p => {
-                // 폴더는 '\*.*' 붙여줌
-                // const path = (p.includes('.')) ? p : `${p}/*.*`;
+                // 폴더는 '\*' 붙여줌
+                // const path = (p.includes('.')) ? p : `${p}/*`;
                 return `/x "${win32.normalize(p)}"`;
             }).join(' ');
         })();
@@ -921,23 +921,23 @@ FunctionEnd
         #-------------------
         
         # 방법 1: 
-        # /r 옵션이 있을때는 폴더명 뒤에 \\*.* 을 붙여줘야 하위 경로까지 패턴 매칭되지 않음
-        # File /nonfatal /a /r [/x 경로 패턴] .\\*.*
-        # File /nonfatal /a ${EXCLUDE_LIST} .\\*.*
-        CopyFiles /SILENT "$INSTDIR\\*.*" "$9"
+        # /r 옵션이 있을때는 폴더명 뒤에 \\* 을 붙여줘야 하위 경로까지 패턴 매칭되지 않음
+        # File /nonfatal /a /r [/x 경로 패턴] .\\*
+        # File /nonfatal /a ${EXCLUDE_LIST} .\\*
+        CopyFiles /SILENT "$INSTDIR\\*" "$9"
         
         # chrome app 리소스 따로 복사해 줘야함
-        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*.*" "${nwRoot}"
-        # CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "${nwRoot}\\locales"
-        # CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "${nwRoot}\\swiftshader"
-        CopyFiles /SILENT "$INSTDIR\\locales\\*.*" "$9\\locales"
-        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*.*" "$9\\swiftshader"
+        # CopyFiles /SILENT /FILESONLY "$INSTDIR\\*" "${nwRoot}"
+        # CopyFiles /SILENT "$INSTDIR\\locales\\*" "${nwRoot}\\locales"
+        # CopyFiles /SILENT "$INSTDIR\\swiftshader\\*" "${nwRoot}\\swiftshader"
+        CopyFiles /SILENT "$INSTDIR\\locales\\*" "$9\\locales"
+        CopyFiles /SILENT "$INSTDIR\\swiftshader\\*" "$9\\swiftshader"
         
         
         # 방법 2: nwJS 설치 (installer 파일 그대로 사용)
         # resource로 정의된 리스트는 $INSTDIR 폴더에서 제외됨
         # moves 목록은 이미 실행됬으므로 전체 폴더를 카피해도 됨 (chrome app만 남아있음)
-        # CopyFiles /SILENT "$INSTDIR\\*.*" "${nwRoot}"
+        # CopyFiles /SILENT "$INSTDIR\\*" "${nwRoot}"
         
         # 제외 목록 삭제
         ${DELETE_LIST}
@@ -993,7 +993,7 @@ FunctionEnd
             ok:
         !macroend
         */
-        const ADD_LIST = resource.map((obj) => {
+        let ADD_LIST = resource.map((obj) => {
             if (!obj.src || !obj.dest) return '';
             const src = win32.normalize(obj.src);
             const dest = win32.normalize(obj.dest);
@@ -1008,7 +1008,7 @@ FunctionEnd
         ; 버전별 리소스 폴더 삭제
         Function un.Install_Resource
             StrCmp "${RESOURCE_DEST}" "" skipDest
-                Delete         "${RESOURCE_DEST}\*.*"
+                Delete         "${RESOURCE_DEST}\*"
                 RMDir /r       "${RESOURCE_DEST}"
 
                 ...
@@ -1019,7 +1019,7 @@ FunctionEnd
             // const src = win32.normalize(obj.src);
             const dest = win32.normalize(obj.dest);
             return `
-    Delete         "${dest}\\*.*"
+    Delete         "${dest}\\*"
     RMDir /r       "${dest}"
             `;
         }).join('');
@@ -1043,11 +1043,11 @@ Function un.Install_Resource
     #skipDest:
         ; 추가로 지정한 폴더 지우기
         StrCmp "\${OTHER_UNINSTALL_DEST}" "" ok
-            Delete      "\${OTHER_UNINSTALL_DEST}\\*.*"
+            Delete      "\${OTHER_UNINSTALL_DEST}\\*"
             RMDir /r    "\${OTHER_UNINSTALL_DEST}"
             
         ; 파일이 아직 남아 있으면..
-        IfFileExists \${OTHER_UNINSTALL_DEST}*.* 0 ok
+        IfFileExists \${OTHER_UNINSTALL_DEST}\\* 0 ok
             RMDir /r         "\${OTHER_UNINSTALL_DEST}"
             RMDir /REBOOTOK  "\${OTHER_UNINSTALL_DEST}"
     ok:

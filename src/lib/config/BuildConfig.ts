@@ -49,7 +49,7 @@ export class BuildConfig {
     public nwFolderName: string = 'nw';
 
     // 코드사인 정보를 설정
-    public codesign?: any = {};
+    public codesign?: any;
 
     constructor(pkg: any = {}) {
 

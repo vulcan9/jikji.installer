@@ -32,6 +32,17 @@ import {
 
 const debug = createDebug('build:builder');
 
+const globbyOption = {
+    // dot 시작 이름 허용
+    dot: true,
+
+    // TODO: https://github.com/isaacs/node-glob#options, warn for cyclic links.
+    // (2025.09.19 ~) 링크 참조일때 무한 순환참조 가능성이 있으므로 false 설정함
+    // https://github.com/mrmlnc/fast-glob#options-3
+    followSymbolicLinks: false,
+    markDirectories: true,
+}
+
 export interface IParseOutputPatternOptions {
     name: string;
     version: string;
@@ -319,6 +330,8 @@ export class Builder {
     };
     */
     protected async applyCodeSign(commonOption: any, config: BuildConfig) {
+        if (!config.codesign) return;
+
         console.log(Ansi.yellow, '# 코드 사인 적용: ', config.codesign, Ansi.reset);
         await codeSign({
             ...commonOption,
@@ -384,6 +397,7 @@ export class Builder {
     protected async fixMacMeta(targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
         const files = await globby(['**/InfoPlist.strings'], {
+            ...globbyOption,
             cwd: targetDir,
         });
 
@@ -527,11 +541,8 @@ export class Builder {
         debug('in copyFiles', 'ignore', ignore);
 
         const files: string[] = await globby(config.files, {
+            ...globbyOption,
             cwd: this.dir,
-            // TODO: https://github.com/isaacs/node-glob#options, warn for cyclic links.
-            // (2025.09.19 ~) 링크 참조일때 무한 순환참조 가능성이 있으므로 false 설정함
-            follow: false,
-            mark: true,
             ignore,
         });
 
@@ -573,6 +584,7 @@ export class Builder {
 
         } else {
             for (const file of files) {
+console.error('=:', file);
                 await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
             }
             await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
@@ -741,6 +753,7 @@ export class Builder {
         await fs.remove(targetArchive);
 
         const files = await globby(['**/*'], {
+            ...globbyOption,
             cwd: sourceDir,
         });
         await compress(sourceDir, files, type, targetArchive);
@@ -908,9 +921,8 @@ export class Builder {
 
          if(config.childApp.dest) {
             config.nwFiles = await globby(['*'], {
+            ...globbyOption,
             cwd: targetDir,
-            follow: true,
-            mark: true,
             ignore: config.childApp.excludes,
          });
             console.info(`* Copy Sub App: ${config.nwFiles.length} files - ${ config.childApp.dest }\n`);
