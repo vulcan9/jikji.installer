@@ -584,7 +584,6 @@ export class Builder {
 
         } else {
             for (const file of files) {
-console.error('=:', file);
                 await copyFileAsync(path.resolve(this.dir, file), path.resolve(appRoot, file));
             }
             await this.writeStrippedManifest(path.resolve(appRoot, 'package.json'), pkg, config);
