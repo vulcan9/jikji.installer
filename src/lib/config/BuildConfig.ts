@@ -49,15 +49,20 @@ export class BuildConfig {
     public nwFolderName: string = 'nw';
 
     // 코드사인 정보를 설정
-    public codesign?: any;
+    public codesign?: any = undefined;
 
     constructor(pkg: any = {}) {
 
         const options = pkg.build ? pkg.build : {};
 
+        // Object.keys(this)로 접근하면 optional(?)로 설정된 속성은 누락됨
+        // (JS 런타임 객체에는 존재하지 않으면 key 누락됨)
         // 초기값이 지정되어 있지 않으면 순환 속성에서 누락됨
-        Object.keys(this).map((key) => {
-            if (options[key] !== undefined) {
+        // undefined 값이라도 지정해 주어야 함
+        Object.keys(options).map((key) => {
+            if (key in this && options[key] !== undefined) {
+                // console.log('# key: ', key);
+
                 switch (key) {
                     case 'win':
                         this.win = new WinConfig(options.win);

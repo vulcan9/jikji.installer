@@ -300,7 +300,7 @@ export class Builder {
 
         if (!config.codesign) {
             console.log(Ansi.magenta);
-            console.log('# (주의) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
+            console.log('# (주의: 코드 사인 안함) 아이콘 변경: exe의 코드 사인은 유지되지 않습니다.');
             console.log(`\t- exe: ${exePath}`);
             console.log(`\t- icon: ${rc.icon}`);
             console.log(Ansi.reset);

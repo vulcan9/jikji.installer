@@ -20,8 +20,8 @@ export class WinConfig {
 
     constructor(options: any = {}) {
 
-        Object.keys(this).map((key) => {
-            if (options[key] !== undefined) {
+        Object.keys(options).map((key) => {
+            if (key in this && options[key] !== undefined) {
                 switch (key) {
                     default:
                         (<any>this)[key] = options[key];

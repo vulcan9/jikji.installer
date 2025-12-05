@@ -256,7 +256,6 @@ async function sign_tocken(options: SignOptions) {
         '* SafeNet Authentication Client 실행',
         '\t- 설정 아이콘 클릭 > (왼쪽 Tree) 클라이언트 설정 > 싱글 로그온 사용 모두 체크 > 저장',
         '\t- 처음 토큰 비밀번호 입력 이후 계속 사용 가능함',
-        '\t- 처음 토큰 비밀번호 입력 이후 계속 사용 가능함',
         '',
         '(참고) 코드사인 인증서 적용 (EV).md',
         '(참고) Token Single Logon.pdf',
