@@ -341,6 +341,9 @@ ${await this.createQuickIcon()}
 ;----------------------------------------------------------
 
 Section Uninstall
+    
+    ; CWD를 먼저 안전한 위치로 변경 (폴더 삭제 안되는 lock 현상 방지)
+    SetOutPath "$TEMP"
 
     DetailPrint $(TXT_UNINSTALL)
     SetDetailsPrint listonly
