@@ -52,8 +52,8 @@ async function run(options) {
     console.log('# output 파일: ', output);
     console.log(Ansi.reset);
     
-    const productVersion = fixWindowsVersion(options.ProductVersion || '1.0.0');
-    const fileVersion = fixWindowsVersion(options.FileVersion || '1.0.0');
+    const productVersion = fixWindowsVersion(options.productVersion || '1.0.0');
+    const fileVersion = fixWindowsVersion(options.fileVersion || '1.0.0');
     const rc = {
         'product-version': productVersion,
         'file-version': fileVersion,
