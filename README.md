@@ -56,6 +56,11 @@
 - `Program Files(x86)` 폴더에는 간단한 launcher exe만 설치되고
 - `AppData/Local` 폴더 아래에 child App (nwJS)이 설치되는 구조
 
+### 중요
+
+* Chromium(NW.js의 기반)은 110 버전부터 Windows 7, 8, 8.1에 대한 지원을 공식적으로 중단했습니다.
+* 증상: 최신 버전의 NW.js로 빌드된 .exe 파일은 Windows 8.1의 시스템 로더가 파일 헤더를 해석하지 못하거나, 필수적인 최신 Windows API(커널 함수)가 없어 193 에러를 내뱉으며 실행을 거부할 수 있습니다.
+
 ------------------------------------------------------
 
 # nwjs-builder-phoenix [![npm version](https://img.shields.io/npm/v/nwjs-builder-phoenix.svg)](https://npmjs.org/package/nwjs-builder-phoenix) [![Standard Version](https://img.shields.io/badge/release-standard%20version-brightgreen.svg)](https://github.com/conventional-changelog/standard-version)
